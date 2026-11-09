@@ -168,13 +168,15 @@ export const MonthlySettlementView: React.FC = () => {
             <UserCheck className="w-4 h-4 text-blue-600" />
             جدول سهم و دریافتی هر اپراتور بر اساس درصد مصوب (دوره {JALALI_MONTH_NAMES[selectedMonth - 1]} {selectedYear})
           </h3>
-          <button
-            onClick={handleFinalize}
-            className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white transition-all text-xs font-semibold flex items-center gap-1"
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            ثبت وضعیت به عنوان «تسویه شد»
-          </button>
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={handleFinalize}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 shadow-sm"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              تایید رسمی و بستن تسویه ماه
+            </button>
+          )}
         </div>
 
         <div className="overflow-x-auto">

@@ -44,9 +44,9 @@ export const QuickLockModal: React.FC = () => {
   };
 
   const handleUnlock = () => {
-    const success = unlockScreen(pin);
-    if (!success) {
-      setError('پین‌کد اشتباه است.');
+    const result = unlockScreen(pin);
+    if (!result.success) {
+      setError(result.message || 'پین‌کد اشتباه است.');
       setPin('');
     } else {
       setPin('');

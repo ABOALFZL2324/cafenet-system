@@ -71,9 +71,9 @@ export const LoginView: React.FC = () => {
       return;
     }
 
-    const success = loginWithPin(selectedUserId, pin);
-    if (!success) {
-      setError('پین‌کد وارد شده اشتباه است.');
+    const result = loginWithPin(selectedUserId, pin);
+    if (!result.success) {
+      setError(result.message || 'پین‌کد وارد شده اشتباه است.');
       setPin('');
     }
   };

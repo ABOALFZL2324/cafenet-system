@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Shift } from '../types';
 import { loadDatabase, saveDatabase } from '../utils/storage';
+import { checkLoginAttempts, recordFailedAttempt, resetFailedAttempts } from '../utils/security';
 
 interface AuthContextType {
   currentUser: User | null;
   currentShift: Shift | null;
   isLocked: boolean;
-  loginWithPin: (userId: number, pin: string) => boolean;
+  loginWithPin: (userId: number, pin: string) => { success: boolean; message?: string };
   logout: () => void;
   lockScreen: () => void;
-  unlockScreen: (pin: string) => boolean;
+  unlockScreen: (pin: string) => { success: boolean; message?: string };
   startShift: () => void;
   endShift: (handoverNote?: string) => void;
 }
@@ -33,16 +34,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const loginWithPin = (userId: number, pin: string): boolean => {
+  const loginWithPin = (userId: number, pin: string): { success: boolean; message?: string } => {
+    const identifier = `user_${userId}`;
+    const attemptCheck = checkLoginAttempts(identifier);
+
+    if (!attemptCheck.allowed) {
+      return {
+        success: false,
+        message: `تعداد تلاش‌های ناموفق بیش از حد مجاز است. لطفاً ${attemptCheck.waitSeconds} ثانیه صبر کنید.`,
+      };
+    }
+
     const db = loadDatabase();
     const user = db.users.find((u) => u.id === userId && u.is_active);
+
     if (!user || user.pin_code !== pin) {
-      return false;
+      const failResult = recordFailedAttempt(identifier);
+      if (failResult.locked) {
+        return {
+          success: false,
+          message: `حساب به دلیل ۴ تلاش ناموفق به مدت ${failResult.waitSeconds} ثانیه موقتاً مسدود شد.`,
+        };
+      }
+      return { success: false, message: 'پین‌کد وارد شده نادرست است.' };
     }
+
+    // ورود موفق -> بازنشانی خطاهای تلاش
+    resetFailedAttempts(identifier);
     setCurrentUser(user);
     db.activeUserId = user.id;
 
-    // بازیابی شیفت باز این کاربر در صورت وجود
     const existingActiveShift = db.shifts.find(
       (s) => s.user_id === user.id && s.status === 'active'
     );
@@ -56,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     saveDatabase(db);
     setIsLocked(false);
-    return true;
+    return { success: true };
   };
 
   const logout = () => {
@@ -72,13 +93,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLocked(true);
   };
 
-  const unlockScreen = (pin: string): boolean => {
-    if (!currentUser) return false;
-    if (currentUser.pin_code === pin) {
-      setIsLocked(false);
-      return true;
+  const unlockScreen = (pin: string): { success: boolean; message?: string } => {
+    if (!currentUser) return { success: false, message: 'کاربری وارد نشده است.' };
+
+    const identifier = `lock_${currentUser.id}`;
+    const attemptCheck = checkLoginAttempts(identifier);
+
+    if (!attemptCheck.allowed) {
+      return {
+        success: false,
+        message: `به دلیل تلاش‌های ناموفق مکرر، صفحه برای ${attemptCheck.waitSeconds} ثانیه قفل شد.`,
+      };
     }
-    return false;
+
+    if (currentUser.pin_code === pin) {
+      resetFailedAttempts(identifier);
+      setIsLocked(false);
+      return { success: true };
+    }
+
+    const failResult = recordFailedAttempt(identifier);
+    if (failResult.locked) {
+      return {
+        success: false,
+        message: `صفحه به دلیل حدس اشتباه برای ${failResult.waitSeconds} ثانیه مسدود گردید.`,
+      };
+    }
+
+    return { success: false, message: 'پین‌کد اشتباه است.' };
   };
 
   const startShift = () => {

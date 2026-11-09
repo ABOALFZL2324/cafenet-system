@@ -130,10 +130,21 @@ export function saveDatabase(data: AppDatabaseState): void {
   }
 }
 
-// صدور فایل پشتیبان کامل JSON دیتابیس
+import { generateBackupChecksum, verifyBackupChecksum } from './security';
+
+// صدور فایل پشتیبان کامل JSON دیتابیس با امضای دیجیتال
 export function exportDatabaseBackup(): void {
   const data = loadDatabase();
-  const jsonStr = JSON.stringify(data, null, 2);
+  const rawDataStr = JSON.stringify(data);
+  const checksum = generateBackupChecksum(rawDataStr);
+  const backupEnvelope = {
+    version: '1.0',
+    exported_at: new Date().toISOString(),
+    checksum,
+    database: data,
+  };
+
+  const jsonStr = JSON.stringify(backupEnvelope, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -145,19 +156,34 @@ export function exportDatabaseBackup(): void {
   URL.revokeObjectURL(url);
 }
 
-// بازیابی دیتابیس از فایل پشتیبان
+// بازیابی دیتابیس از فایل پشتیبان با بررسی صحت و امضای دیجیتال
 export function restoreDatabaseBackup(file: File): Promise<AppDatabaseState> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const parsed = JSON.parse(content) as AppDatabaseState;
-        if (!parsed.users || !parsed.settings) {
+        const parsed = JSON.parse(content);
+
+        let targetData: AppDatabaseState;
+
+        // اگر فایل پاکت دارای امضای دیجیتال باشد
+        if (parsed.checksum && parsed.database) {
+          const rawPayload = JSON.stringify(parsed.database);
+          const isValid = verifyBackupChecksum(rawPayload, parsed.checksum);
+          if (!isValid) {
+            throw new Error('هشدار امنیتی: امضای دیجیتال فایل پشتیبان معتبر نیست؛ ممکن است فایل دستکاری شده باشد.');
+          }
+          targetData = parsed.database;
+        } else if (parsed.users && parsed.settings) {
+          // نسخه قدیمی بدون پاکت
+          targetData = parsed;
+        } else {
           throw new Error('ساختار فایل پشتیبان نامعتبر است.');
         }
-        saveDatabase(parsed);
-        resolve(parsed);
+
+        saveDatabase(targetData);
+        resolve(targetData);
       } catch (err) {
         reject(err);
       }

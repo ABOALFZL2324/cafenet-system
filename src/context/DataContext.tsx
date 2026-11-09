@@ -15,6 +15,7 @@ import {
 } from '../types';
 import { loadDatabase, saveDatabase, AppDatabaseState } from '../utils/storage';
 import { isInJalaliMonth } from '../utils/jalali';
+import { sanitizeInput } from '../utils/security';
 
 interface DataContextType {
   dbState: AppDatabaseState;
@@ -69,8 +70,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const id = Date.now();
     const invoiceNum = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${(db.invoices.length + 1).toString().padStart(3, '0')}`;
     
+    // ضدعفونی‌سازی امنیتی ورودی‌ها
+    const sanitizedItems = invoiceData.items.map((i) => ({
+      ...i,
+      service_title: sanitizeInput(i.service_title),
+      category_name: i.category_name ? sanitizeInput(i.category_name) : undefined,
+    }));
+
     const newInvoice: Invoice = {
       ...invoiceData,
+      customer_name: invoiceData.customer_name ? sanitizeInput(invoiceData.customer_name) : undefined,
+      customer_phone: invoiceData.customer_phone ? sanitizeInput(invoiceData.customer_phone) : undefined,
+      items: sanitizedItems,
       id,
       invoice_number: invoiceNum,
       created_at: new Date().toISOString(),
@@ -86,6 +97,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const db = loadDatabase();
     const newExpense: Expense = {
       ...expenseData,
+      title: sanitizeInput(expenseData.title),
+      description: expenseData.description ? sanitizeInput(expenseData.description) : undefined,
       id: Date.now(),
       created_at: new Date().toISOString(),
     };
@@ -100,6 +113,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const db = loadDatabase();
     const newOrder: PendingOrder = {
       ...orderData,
+      customer_name: sanitizeInput(orderData.customer_name),
+      customer_phone: sanitizeInput(orderData.customer_phone),
+      title: sanitizeInput(orderData.title),
+      details: orderData.details ? sanitizeInput(orderData.details) : undefined,
       id: Date.now(),
       created_at: new Date().toISOString(),
     };
