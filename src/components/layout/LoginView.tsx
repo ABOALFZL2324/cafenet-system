@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { ShieldCheck, UserCheck, KeyRound, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, UserCheck, ArrowLeft, Keyboard } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
   const { users, settings } = useData();
@@ -10,7 +10,38 @@ export const LoginView: React.FC = () => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
+  const inputRef = useRef<HTMLInputElement>(null);
   const activeUsers = users.filter((u) => u.is_active);
+
+  // فوکوس خودکار هنگام انتخاب کاربر
+  useEffect(() => {
+    if (selectedUserId && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [selectedUserId]);
+
+  // شنونده کلیدهای فیزیکی کیبورد
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedUserId) return;
+
+      // اعداد 0 تا 9 یا Numpad
+      if (/^[0-9]$/.test(e.key)) {
+        if (pin.length < 6) {
+          setPin((prev) => prev + e.key);
+          setError('');
+        }
+      } else if (e.key === 'Backspace') {
+        setPin((prev) => prev.slice(0, -1));
+        setError('');
+      } else if (e.key === 'Enter') {
+        handleSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedUserId, pin]);
 
   const handleSelectUser = (id: number) => {
     setSelectedUserId(id);
@@ -30,8 +61,7 @@ export const LoginView: React.FC = () => {
     setError('');
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSubmit = () => {
     if (!selectedUserId) {
       setError('لطفاً ابتدا کاربر خود را انتخاب کنید.');
       return;
@@ -54,9 +84,14 @@ export const LoginView: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 dark:from-zinc-900 dark:to-black flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-700/80 p-6 text-center">
         {/* لوگو و عنوان */}
-        <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-blue-500/30 mb-3">
-          <ShieldCheck className="w-8 h-8" />
-        </div>
+        {settings.logo_url ? (
+          <img src={settings.logo_url} alt="لوگو" className="h-16 mx-auto mb-3 object-contain" />
+        ) : (
+          <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-blue-500/30 mb-3">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+        )}
+
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">{settings.name}</h2>
         <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 mb-6">
           سامانه یکپارچه مدیریت مالی، شیفت و عملیات کافی‌نت
@@ -94,7 +129,7 @@ export const LoginView: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* مرحله ۲: ورود پین‌کد سریع */
+          /* مرحله ۲: ورود پین‌کد با کیبورد یا کیپد */
           <div>
             <div className="flex items-center justify-between mb-4">
               <button
@@ -109,14 +144,25 @@ export const LoginView: React.FC = () => {
               </div>
             </div>
 
+            {/* ورودی مخفی برای فوکوس کیبورد */}
+            <input
+              ref={inputRef}
+              type="password"
+              className="opacity-0 absolute -z-10"
+              autoFocus
+            />
+
             {/* نمایش پین‌کد */}
             <div className="mb-4">
-              <div className="text-[11px] text-slate-500 mb-2">پین‌کد عددی ورود را وارد کنید:</div>
+              <div className="text-[11px] text-slate-500 mb-2 flex items-center justify-center gap-1">
+                <Keyboard className="w-3.5 h-3.5 text-blue-500" />
+                <span>پین‌کد عددی را با <strong>کیبورد</strong> یا کلیک وارد کنید:</span>
+              </div>
               <div className="flex justify-center gap-2">
                 {[0, 1, 2, 3].map((idx) => (
                   <div
                     key={idx}
-                    className={`w-9 h-11 rounded-lg border flex items-center justify-center text-lg font-bold transition-all ${
+                    className={`w-10 h-12 rounded-xl border flex items-center justify-center text-xl font-bold transition-all ${
                       pin.length > idx
                         ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                         : 'border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-transparent'
@@ -129,8 +175,8 @@ export const LoginView: React.FC = () => {
               {error && <div className="text-[11px] text-rose-500 font-semibold mt-2">{error}</div>}
             </div>
 
-            {/* کیپد عددی لمسی/کلیکی */}
-            <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto mb-4">
+            {/* کیپد عددی */}
+            <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto mb-2">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                 <button
                   key={digit}
@@ -157,10 +203,10 @@ export const LoginView: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => handleSubmit()}
+                onClick={handleSubmit}
                 className="h-11 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/20"
               >
-                تایید
+                تایید (Enter)
               </button>
             </div>
           </div>

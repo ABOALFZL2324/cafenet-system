@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { exportDatabaseBackup, restoreDatabaseBackup } from '../../utils/storage';
-import { Settings, Save, Download, Upload, ShieldCheck, Database } from 'lucide-react';
+import { Settings, Save, Download, Upload, ShieldCheck, Database, Image, Trash2 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { settings, updateSettings, refreshData } = useData();
@@ -9,10 +9,32 @@ export const SettingsView: React.FC = () => {
   const [name, setName] = useState(settings.name);
   const [phone, setPhone] = useState(settings.phone);
   const [address, setAddress] = useState(settings.address);
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(settings.logo_url);
   const [invoiceFooter, setInvoiceFooter] = useState(settings.invoice_footer_note);
   const [settlementModel, setSettlementModel] = useState(settings.default_settlement_model);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState<string>('');
+
+  // آپلود تصویر لوگو و تبدیل به Base64
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('حجم تصویر لوگو باید کمتر از ۲ مگابایت باشد.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogoUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(undefined);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +42,7 @@ export const SettingsView: React.FC = () => {
       name: name.trim(),
       phone: phone.trim(),
       address: address.trim(),
+      logo_url: logoUrl,
       invoice_footer_note: invoiceFooter.trim(),
       default_settlement_model: settlementModel,
     });
@@ -43,22 +66,58 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 text-right max-w-4xl">
+    <div className="space-y-4 text-right max-w-4xl no-print">
       <div className="bg-white dark:bg-zinc-800 p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-sm">
         <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <Settings className="w-5 h-5 text-blue-600" />
-          تنظیمات عمومی کافی‌نت و پشتیبان‌گیری
+          تنظیمات عمومی، لوگوی کافی‌نت و پشتیبان‌گیری
         </h2>
         <p className="text-[11px] text-slate-500 mt-0.5">
-          شخصی‌سازی نام و سربرگ فاکتورها، مدل پیش‌فرض مالی و پشتیبان‌گیری از داده‌ها
+          شخصی‌سازی نام و لوگوی فاکتورها، مدل پیش‌فرض مالی و پشتیبان‌گیری از داده‌ها
         </p>
       </div>
 
       {/* فرم مشخصات مغازه */}
       <form onSubmit={handleSave} className="bg-white dark:bg-zinc-800 p-5 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-sm space-y-4">
         <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 pb-2 border-b border-slate-100 dark:border-zinc-750">
-          مشخصات کسب‌وکار (نمایش در سربرگ فاکتور مشتری و اسناد تسویه)
+          مشخصات کسب‌وکار و لوگوی فاکتور
         </h3>
+
+        {/* بخش آپلود لوگوی کافی‌نت */}
+        <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 flex flex-col sm:flex-row items-center gap-4">
+          <div className="w-20 h-20 rounded-xl bg-white dark:bg-zinc-800 border-2 border-dashed border-slate-300 dark:border-zinc-600 flex items-center justify-center overflow-hidden shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="لوگوی کافی‌نت" className="w-full h-full object-contain p-1" />
+            ) : (
+              <Image className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+            )}
+          </div>
+
+          <div className="flex-1 text-right">
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+              تصویر لوگوی اختصاصی کافی‌نت (برای سربرگ فاکتور حرارتی و A5)
+            </div>
+            <p className="text-[11px] text-slate-500 mb-2">
+              فرمت‌های PNG یا JPG ترجیحاً با زمینه شفاف یا سفید
+            </p>
+            <div className="flex gap-2">
+              <label className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 text-xs font-bold cursor-pointer transition-colors">
+                انتخاب و آپلود لوگو
+                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+              </label>
+              {logoUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 text-xs font-bold flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  حذف لوگو
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>

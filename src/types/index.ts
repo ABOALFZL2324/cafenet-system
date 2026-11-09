@@ -125,6 +125,7 @@ export interface CafeNetSettings {
   name: string; // نام کافی‌نت
   phone: string; // تلفن
   address: string; // آدرس
+  logo_url?: string; // تصویر لوگوی کافی‌نت به صورت Base64
   invoice_footer_note: string; // متن پیام پایین فاکتور
   default_settlement_model: SettlementModel;
 }

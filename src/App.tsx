@@ -34,14 +34,42 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // کلید میانبر قفل صفحه حریم خصوصی (Alt + L)
+  // کلیدهای میانبر سرتاسری نرم‌افزار (Keyboard Shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // قفل سریع صفحه با Alt + L
       if (e.altKey && (e.key === 'l' || e.key === 'L' || e.key === 'م')) {
         e.preventDefault();
         lockScreen();
+        return;
+      }
+
+      // سوئیچ تب‌ها با کلیدهای تابعی یا Alt + عدد
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setCurrentTab('dashboard');
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        setCurrentTab('pending');
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        setCurrentTab('invoices');
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        setCurrentTab('expenses');
+      } else if (e.key === 'F5' && !e.ctrlKey) {
+        // جلوگیری از رفرش ناخواسته صفحه با F5، بلکه رفتن به تسویه
+        e.preventDefault();
+        setCurrentTab('settlement');
+      } else if (e.key === 'F6') {
+        e.preventDefault();
+        setCurrentTab('rates');
+      } else if (e.key === 'F7') {
+        e.preventDefault();
+        setCurrentTab('analytics');
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lockScreen]);
@@ -82,6 +110,22 @@ export const App: React.FC = () => {
     <div className="h-screen flex flex-col bg-[#f3f3f3] dark:bg-[#202020] text-slate-800 dark:text-slate-100 overflow-hidden font-sans">
       {/* نوار عنوان ویندوز */}
       <TitleBar darkMode={darkMode} setDarkMode={setDarkMode} />
+
+      {/* نوار راهنمای کلیدهای میانبر سریع */}
+      <div className="h-6 bg-slate-200/80 dark:bg-zinc-850 border-b border-slate-300/60 dark:border-zinc-700/60 px-4 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 no-print select-none">
+        <div className="flex items-center gap-3">
+          <span>میانبرها:</span>
+          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F1</kbd> داشبورد</span>
+          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F2</kbd> سفارشات معلق</span>
+          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F3</kbd> فاکتورها</span>
+          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F4</kbd> هزینه‌ها</span>
+          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F5</kbd> تسویه سود</span>
+          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F6</kbd> نرخ‌نامه</span>
+        </div>
+        <div>
+          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">Alt + L</kbd> قفل سریع صفحه</span>
+        </div>
+      </div>
 
       {/* بخش اصلی: سایدبار + محتوای تب */}
       <div className="flex-1 flex overflow-hidden">

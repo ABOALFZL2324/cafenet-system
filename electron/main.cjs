@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -16,13 +17,11 @@ function createWindow() {
     },
   });
 
-  // در حالت توسعه یا بیلد
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-
-  if (isDev) {
-    win.loadURL('http://localhost:5173');
+  const distPath = path.join(__dirname, '../dist/index.html');
+  if (fs.existsSync(distPath)) {
+    win.loadFile(distPath);
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'));
+    win.loadURL('http://localhost:5173');
   }
 }
 
