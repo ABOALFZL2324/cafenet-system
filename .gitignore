@@ -1,0 +1,32 @@
+# وابستگی‌ها
+node_modules/
+.pnp
+.pnp.js
+
+# خروجی‌های بیلد
+dist/
+dist-electron/
+release/
+
+# لاگ‌ها
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# متغیرهای محیطی
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ابزارهای ویرایشگر
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

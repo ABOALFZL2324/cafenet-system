@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+    font-feature-settings: "ss01", "ss02";
+  }
+}
+
+/* استایل‌های اختصاصی هنگام پرینت فاکتور یا برگه تسویه */
+@media print {
+  body {
+    background: transparent !important;
+    color: black !important;
+  }
+
+  header, aside, button, nav, .no-print {
+    display: none !important;
+  }
+
+  #printable-invoice, #printable-settlement {
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

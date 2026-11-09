@@ -1,0 +1,68 @@
+{
+  "name": "cafenet-system",
+  "version": "1.0.0",
+  "description": "سیستم جامع مدیریت مالی، شیفت و عملیات کافی‌نت",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "electron .",
+    "dist:win": "vite build && electron-builder --win nsis"
+  },
+  "keywords": [
+    "cafenet",
+    "management",
+    "windows",
+    "accounting",
+    "offline"
+  ],
+  "author": "CafeNet System",
+  "license": "MIT",
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "jalaali-js": "^1.2.7",
+    "lucide-react": "^1.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/jalaali-js": "^1.1.3",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.10",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.1"
+  },
+  "build": {
+    "appId": "com.cafenet.manager",
+    "productName": "CafeNet Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "مدیریت کافی‌نت",
+      "uninstallDisplayName": "CafeNet Manager (حذف نرم‌افزار کافی‌نت)"
+    }
+  }
+}
