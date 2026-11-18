@@ -4,6 +4,7 @@ import { TitleBar } from './components/layout/TitleBar';
 import { Sidebar, NavTab } from './components/layout/Sidebar';
 import { LoginView } from './components/layout/LoginView';
 import { QuickLockModal } from './components/layout/QuickLockModal';
+import { ShortcutsModal } from './components/layout/ShortcutsModal';
 
 // نماهای صفحات
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -27,6 +28,8 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [isGlobalInvoiceOpen, setIsGlobalInvoiceOpen] = useState(false);
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<number | null>(null);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('cafenet_dark_mode') === 'true';
   });
@@ -48,7 +51,19 @@ export const App: React.FC = () => {
       if (e.key === 'Escape') {
         setIsGlobalInvoiceOpen(false);
         setSelectedInvoiceForPrint(null);
+        setIsShortcutsOpen(false);
         return;
+      }
+
+      // راهنمای میانبرها با کلید ؟ یا ?
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        // اگر داخل فیلد ورودی متن نیست
+        const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+        if (activeTag !== 'input' && activeTag !== 'textarea') {
+          e.preventDefault();
+          setIsShortcutsOpen((prev) => !prev);
+          return;
+        }
       }
 
       // شورت‌کات سرتاسری ثبت فاکتور جدید (Ctrl + N یا Ctrl + د)
@@ -65,13 +80,16 @@ export const App: React.FC = () => {
         return;
       }
 
-      // سوئیچ تب‌ها با کلیدهای تابعی یا Alt + عدد
+      // سوئیچ تب‌ها با کلیدهای تابعی
       if (e.key === 'F1') {
         e.preventDefault();
         setCurrentTab('dashboard');
       } else if (e.key === 'F2') {
-        e.preventDefault();
-        setCurrentTab('pending');
+        // اگر داخل مودال فاکتور نیستیم به تب سفارشات برود
+        if (!isGlobalInvoiceOpen) {
+          e.preventDefault();
+          setCurrentTab('pending');
+        }
       } else if (e.key === 'F3') {
         e.preventDefault();
         setCurrentTab('invoices');
@@ -79,7 +97,6 @@ export const App: React.FC = () => {
         e.preventDefault();
         setCurrentTab('expenses');
       } else if (e.key === 'F5' && !e.ctrlKey) {
-        // جلوگیری از رفرش ناخواسته صفحه با F5، بلکه رفتن به تسویه
         e.preventDefault();
         setCurrentTab('settlement');
       } else if (e.key === 'F6') {
@@ -93,97 +110,70 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [lockScreen]);
+  }, [lockScreen, isGlobalInvoiceOpen]);
 
-  // اگر سیستم هنوز راه‌اندازی نشده یا فاقد کاربر است، ویزارد راه‌اندازی اولیه و ورود اکسل اجرا شود
+  // اگر سیستم هنوز راه‌اندازی نشده یا فاقد کاربر است، ویزارد راه‌اندازی اولیه اجرا شود
   if (!settings.is_initialized || users.length === 0) {
     return <OnboardingWizard />;
   }
 
-  // اگر کاربری لاگین نکرده باشد، صفحه لاگین را نشان بده
+  // اگر کاربری وارد نشده باشد صفحه لاگین نمایش داده شود
   if (!currentUser) {
     return <LoginView />;
   }
 
-  const renderActiveView = () => {
-    switch (currentTab) {
-      case 'dashboard':
-        return <DashboardView onNavigateTab={(tab) => setCurrentTab(tab)} />;
-      case 'pending':
-        return <PendingOrdersView />;
-      case 'invoices':
-        return <InvoicesListView />;
-      case 'expenses':
-        return <ExpensesView />;
-      case 'shifts':
-        return <ShiftsView />;
-      case 'rates':
-        return <ServicesRatesView />;
-      case 'settlement':
-        return <MonthlySettlementView />;
-      case 'analytics':
-        return <AnalyticsView />;
-      case 'users':
-        return <UsersView />;
-      case 'settings':
-        return <SettingsView />;
-      default:
-        return <DashboardView onNavigateTab={(tab) => setCurrentTab(tab)} />;
-    }
-  };
-
   return (
-    <div className="h-screen flex flex-col bg-[#f3f3f3] dark:bg-[#202020] text-slate-800 dark:text-slate-100 overflow-hidden font-sans">
-      {/* نوار عنوان ویندوز */}
-      <TitleBar darkMode={darkMode} setDarkMode={setDarkMode} />
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-[#121214] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
+      {/* تایتل‌بار بالای پنجره */}
+      <TitleBar
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+      />
 
-      {/* نوار راهنمای کلیدهای میانبر سریع */}
-      <div className="h-6 bg-slate-200/80 dark:bg-zinc-850 border-b border-slate-300/60 dark:border-zinc-700/60 px-4 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 no-print select-none">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-            <kbd className="px-1.5 py-0.5 bg-emerald-600 text-white rounded font-black shadow-sm">Ctrl + N</kbd>
-            ثبت فاکتور سریع
-          </span>
-          <span className="text-slate-300 dark:text-zinc-600">|</span>
-          <span>میانبرها:</span>
-          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F1</kbd> داشبورد</span>
-          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F2</kbd> سفارشات معلق</span>
-          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F3</kbd> فاکتورها</span>
-          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F4</kbd> هزینه‌ها</span>
-          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F5</kbd> تسویه سود</span>
-          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F6</kbd> نرخ‌نامه</span>
-        </div>
-        <div>
-          <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">Alt + L</kbd> قفل سریع صفحه</span>
-        </div>
-      </div>
+      {/* بخش اصلی بدنه: سایدبار در راست و محتوا در چپ */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* نوار کناری (Sidebar) */}
+        <Sidebar currentTab={currentTab} onSelectTab={(tab) => setCurrentTab(tab)} />
 
-      {/* بخش اصلی: سایدبار + محتوای تب */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* منوی کناری */}
-        <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
-
-        {/* محتوای صفحات */}
-        <main className="flex-1 overflow-y-auto p-5">
-          {renderActiveView()}
+        {/* ناحیه اسکرول‌شونده صفحات داخلی */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 dark:bg-[#18181c]/60">
+          {currentTab === 'dashboard' && <DashboardView onNavigateTab={(tab) => setCurrentTab(tab)} />}
+          {currentTab === 'pending' && <PendingOrdersView />}
+          {currentTab === 'invoices' && <InvoicesListView />}
+          {currentTab === 'expenses' && <ExpensesView />}
+          {currentTab === 'shifts' && <ShiftsView />}
+          {currentTab === 'rates' && <ServicesRatesView />}
+          {currentTab === 'settlement' && <MonthlySettlementView />}
+          {currentTab === 'analytics' && <AnalyticsView />}
+          {currentTab === 'users' && <UsersView />}
+          {currentTab === 'settings' && <SettingsView />}
         </main>
       </div>
 
-      {/* پنجره قفل سریع صفحه */}
+      {/* مودال قفل سریع صفحه */}
       <QuickLockModal />
 
-      {/* مودال سرتاسری ثبت فاکتور سریع (Ctrl + N) */}
+      {/* مودال راهنمای کلیدهای میانبر */}
+      <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+
+      {/* مودال ثبت فاکتور سراسری با کلید میانبر Ctrl+N */}
       <QuickSaleModal
         isOpen={isGlobalInvoiceOpen}
         onClose={() => setIsGlobalInvoiceOpen(false)}
-        onViewInvoice={(id) => setSelectedInvoiceForPrint(id)}
+        onViewInvoice={(invoiceId) => {
+          setIsGlobalInvoiceOpen(false);
+          setSelectedInvoiceForPrint(invoiceId);
+        }}
       />
 
-      {/* مودال چاپ ایزوله فاکتور */}
-      <InvoiceViewModal
-        invoiceId={selectedInvoiceForPrint}
-        onClose={() => setSelectedInvoiceForPrint(null)}
-      />
+      {/* مودال نمایش و پرینت فاکتور */}
+      {selectedInvoiceForPrint && (
+        <InvoiceViewModal
+          invoiceId={selectedInvoiceForPrint}
+          onClose={() => setSelectedInvoiceForPrint(null)}
+        />
+      )}
     </div>
   );
 };

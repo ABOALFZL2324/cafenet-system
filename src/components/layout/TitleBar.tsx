@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { getFullJalaliString, formatJalaliTime } from '../../utils/jalali';
-import { Lock, Sun, Moon, LogOut, Clock, ShieldCheck, Sparkles } from 'lucide-react';
+import { Lock, Sun, Moon, LogOut, Clock, ShieldCheck, Keyboard } from 'lucide-react';
 
 interface TitleBarProps {
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
+  onOpenShortcuts?: () => void;
 }
 
-export const TitleBar: React.FC<TitleBarProps> = ({ darkMode, setDarkMode }) => {
+export const TitleBar: React.FC<TitleBarProps> = ({ darkMode, setDarkMode, onOpenShortcuts }) => {
   const { currentUser, currentShift, lockScreen, logout } = useAuth();
   const { settings } = useData();
   const [currentTime, setCurrentTime] = useState<string>(formatJalaliTime());
@@ -59,7 +60,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ darkMode, setDarkMode }) => 
         </span>
       </div>
 
-      {/* بخش چپ: وضعیت متصدی، قفل سریع و تم */}
+      {/* بخش چپ: وضعیت متصدی، راهنمای میانبرها، قفل سریع و تم */}
       <div className="flex items-center gap-2">
         {currentUser && (
           <div className="flex items-center gap-2.5 bg-slate-100/80 dark:bg-zinc-800/70 pl-3 pr-2 py-1 rounded-2xl border border-slate-200/70 dark:border-zinc-700/70 shadow-xs">
@@ -85,6 +86,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({ darkMode, setDarkMode }) => 
               </div>
             </div>
           </div>
+        )}
+
+        {/* دکمه راهنمای کلیدهای میانبر */}
+        {onOpenShortcuts && (
+          <button
+            onClick={onOpenShortcuts}
+            title="راهنمای کلیدهای میانبر سریع (کلید ?)"
+            className="p-2 rounded-xl text-slate-600 dark:text-zinc-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800/40"
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
         )}
 
         {/* دکمه قفل سریع صفحه */}

@@ -3,6 +3,7 @@ import { useData } from '../../context/DataContext';
 import { ServiceItem } from '../../types';
 import { formatToman, parseTomanInput } from '../../utils/currency';
 import { downloadServicesTemplateExcel, parseServicesExcelFile, ParsedExcelService } from '../../utils/exportExcel';
+import { matchesFuzzyPersian } from '../../utils/text';
 import { Tags, Plus, Edit2, Trash2, Check, X, Search, FolderPlus, FileSpreadsheet, Download, Upload, AlertCircle } from 'lucide-react';
 
 export const ServicesRatesView: React.FC = () => {
@@ -45,7 +46,7 @@ export const ServicesRatesView: React.FC = () => {
 
   const filteredServices = services.filter((s) => {
     const matchCat = selectedCat === 'all' || s.category_id === selectedCat;
-    const matchSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = matchesFuzzyPersian(s.title, searchQuery);
     return matchCat && matchSearch;
   });
 

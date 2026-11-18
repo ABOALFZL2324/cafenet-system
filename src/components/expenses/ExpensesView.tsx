@@ -3,6 +3,7 @@ import { useData } from '../../context/DataContext';
 import { formatToman } from '../../utils/currency';
 import { formatJalaliDateTime } from '../../utils/jalali';
 import { exportExpensesToExcel } from '../../utils/exportExcel';
+import { matchesFuzzyPersian } from '../../utils/text';
 import { ExpenseModal } from '../dashboard/ExpenseModal';
 import { ArrowDownCircle, Plus, FileSpreadsheet, Search } from 'lucide-react';
 
@@ -12,9 +13,9 @@ export const ExpensesView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredExpenses = expenses.filter((e) =>
-    e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (e.description && e.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (e.user_name && e.user_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    matchesFuzzyPersian(e.title, searchQuery) ||
+    (e.description ? matchesFuzzyPersian(e.description, searchQuery) : false) ||
+    (e.user_name ? matchesFuzzyPersian(e.user_name, searchQuery) : false)
   );
 
   const totalExpenseSum = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);

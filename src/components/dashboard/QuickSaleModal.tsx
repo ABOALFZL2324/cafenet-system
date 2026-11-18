@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { formatToman, parseTomanInput } from '../../utils/currency';
 import { InvoiceItem, PaymentMethod } from '../../types';
+import { matchesFuzzyPersian } from '../../utils/text';
 import {
   Receipt,
   Plus,
@@ -17,14 +18,23 @@ import {
   Banknote,
   User,
   Phone,
-  Tag,
+  Star,
+  Zap,
 } from 'lucide-react';
+
+export interface InitialSaleData {
+  customerName?: string;
+  customerPhone?: string;
+  orderTitle?: string;
+  orderAmount?: number;
+}
 
 interface QuickSaleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenPrintCalc?: () => void;
   onViewInvoice?: (invoiceId: number) => void;
+  initialData?: InitialSaleData | null;
 }
 
 export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
@@ -32,6 +42,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
   onClose,
   onOpenPrintCalc,
   onViewInvoice,
+  initialData,
 }) => {
   const { currentUser, currentShift } = useAuth();
   const { services, serviceCategories, addInvoice } = useData();
@@ -42,7 +53,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pos');
   const [discountStr, setDiscountStr] = useState('0');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<number | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<number | 'all' | 'favorites'>('favorites');
   const [error, setError] = useState('');
 
   // استیت فرم خدمت آزاد و دلخواه (خارج از نرخ‌نامه)
@@ -50,6 +61,34 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
   const [customTitle, setCustomTitle] = useState('');
   const [customPriceStr, setCustomPriceStr] = useState('');
   const [customQty, setCustomQty] = useState(1);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // بارگذاری داده‌های اولیه اگر از سفارش معلق آمده باشد
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setCustomerName(initialData.customerName || '');
+        setCustomerPhone(initialData.customerPhone || '');
+        if (initialData.orderTitle && initialData.orderAmount) {
+          const customItem: InvoiceItem = {
+            id: Math.random().toString(36).substring(2, 9),
+            service_id: 0,
+            service_title: initialData.orderTitle,
+            category_name: 'سفارش تسویه معلق',
+            quantity: 1,
+            unit_price: initialData.orderAmount,
+            total_price: initialData.orderAmount,
+          };
+          setItems([customItem]);
+        }
+      }
+      // فوکوس خودکار روی اینپوت جستجو جهت سرعت فوق‌العاده بالا
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen, initialData]);
 
   // کلید میانبر کیبورد F2 برای ثبت نهایی فاکتور
   useEffect(() => {
@@ -68,15 +107,32 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
 
   if (!isOpen || !currentUser) return null;
 
-  // فیلتر خدمات بر اساس سرچ و دسته
+  // کلمات کلیدی خدمات پرکاربرد کافی‌نت
+  const isFavoriteService = (s: typeof services[0]) => {
+    const favKeywords = ['پرینت', 'کپی', 'ثبت‌نام', 'ثبت نام', 'اسکن', 'سخا', 'ثنا', 'بیمه', 'خلافی', 'فیش'];
+    return favKeywords.some((k) => matchesFuzzyPersian(s.title, k)) || s.id <= 8;
+  };
+
+  // فیلتر خدمات با جستجوی هوشمند فازی فارسی و تفکیک پرکاربردها
   const filteredServices = services.filter((s) => {
     if (!s.is_active) return false;
-    const matchCat = selectedCategory === 'all' || s.category_id === selectedCategory;
-    const matchSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCat && matchSearch;
+
+    // فیلتر دسته
+    if (selectedCategory === 'favorites') {
+      if (!isFavoriteService(s) && !searchQuery) return false;
+    } else if (selectedCategory !== 'all') {
+      if (s.category_id !== selectedCategory) return false;
+    }
+
+    // فیلتر جستجو
+    if (searchQuery.trim()) {
+      return matchesFuzzyPersian(s.title, searchQuery);
+    }
+
+    return true;
   });
 
-  // افزودن خدمت معمول از نرخ‌نامه
+  // افزودن خدمت از نرخ‌نامه
   const handleAddService = (service: typeof services[0]) => {
     const existingIndex = items.findIndex((i) => i.service_id === service.id);
     if (existingIndex !== -1) {
@@ -100,7 +156,6 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
     setError('');
   };
 
-  // افزایش تعداد
   const handleIncreaseQty = (index: number) => {
     const updated = [...items];
     updated[index].quantity += 1;
@@ -108,7 +163,6 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
     setItems(updated);
   };
 
-  // کاهش تعداد
   const handleDecreaseQty = (index: number) => {
     const updated = [...items];
     if (updated[index].quantity > 1) {
@@ -120,12 +174,10 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
     }
   };
 
-  // حذف آیتم
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  // افزودن خدمت آزاد / دلخواه
   const handleAddCustomItem = () => {
     const price = parseTomanInput(customPriceStr);
     if (!customTitle.trim()) {
@@ -155,12 +207,10 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
     setError('');
   };
 
-  // محاسبات مالی فاکتور
   const subtotal = items.reduce((acc, i) => acc + i.total_price, 0);
   const discount = parseTomanInput(discountStr);
   const finalAmount = Math.max(0, subtotal - discount);
 
-  // ثبت و صدور فاکتور
   const handleSaveInvoice = () => {
     if (items.length === 0) {
       setError('حداقل یک خدمت به فاکتور اضافه کنید.');
@@ -180,7 +230,6 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
       payment_method: paymentMethod,
     });
 
-    // پاکسازی فرم
     setItems([]);
     setCustomerName('');
     setCustomerPhone('');
@@ -194,10 +243,10 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 no-print animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 no-print animate-fade-in">
       <div className="w-full max-w-5xl h-[88vh] bg-white dark:bg-[#1f1f23] rounded-3xl shadow-2xl border border-slate-200/90 dark:border-zinc-800 flex flex-col overflow-hidden text-right">
-        {/* هدر مدرن مودال */}
-        <div className="h-14 px-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/80 dark:from-zinc-900/60 dark:via-[#1f1f23] dark:to-zinc-900/60">
+        {/* هدر */}
+        <div className="h-14 px-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-gradient-to-r from-slate-50/90 via-white to-slate-50/90 dark:from-zinc-900/60 dark:via-[#1f1f23] dark:to-zinc-900/60">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30">
               <Receipt className="w-5 h-5" />
@@ -210,7 +259,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                 </span>
               </h2>
               <p className="text-[10px] text-slate-400 dark:text-zinc-400">
-                متصدی ثبت‌کننده: {currentUser.full_name} {currentShift ? '(شیفت فعال)' : '(بدون شیفت)'}
+                متصدی: {currentUser.full_name} {currentShift ? '(شیفت فعال)' : '(بدون شیفت)'}
               </p>
             </div>
           </div>
@@ -227,13 +276,14 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
         <div className="flex-1 flex overflow-hidden">
           {/* سمت راست: کاتالوگ و خدمات */}
           <div className="w-7/12 border-l border-slate-100 dark:border-zinc-800 p-4 flex flex-col overflow-hidden">
-            {/* نوار جستجو و ابزارها */}
+            {/* نوار جستجو و ابزارها با فوکوس خودکار */}
             <div className="flex gap-2 mb-3 shrink-0">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 absolute right-3 top-3 text-slate-400" />
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="جستجوی سریع در خدمات..."
+                  placeholder="جستجوی هوشمند (مثلاً: پرینت، سخا، ثبت نام، خلافی)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-10 pr-9 pl-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900/60 text-xs text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500"
@@ -273,7 +323,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                 <div className="grid grid-cols-12 gap-2">
                   <input
                     type="text"
-                    placeholder="شرح خدمت (مثلا: ثبت نام آزمون ارشد...)"
+                    placeholder="شرح خدمت (مثلا: ثبت نام کنکور، تنظیم قرارداد...)"
                     value={customTitle}
                     onChange={(e) => setCustomTitle(e.target.value)}
                     className="col-span-6 h-9 px-3 rounded-xl border border-purple-200 bg-white dark:bg-zinc-900 text-xs"
@@ -305,8 +355,21 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
               </div>
             )}
 
-            {/* دسته‌بندی‌ها */}
+            {/* دسته‌بندی‌ها با تب ویژه پرکاربردها ⭐ */}
             <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('favorites')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all flex items-center gap-1 ${
+                  selectedCategory === 'favorites'
+                    ? 'bg-amber-500 text-white shadow-xs shadow-amber-500/30 ring-2 ring-amber-400/30'
+                    : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 border border-amber-200 dark:border-amber-800/40'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                پرکاربرد و فوری
+              </button>
+
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
@@ -316,8 +379,9 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                     : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
                 }`}
               >
-                همه خدمات
+                همه خدمات ({services.length})
               </button>
+
               {serviceCategories.map((cat) => (
                 <button
                   key={cat.id}
@@ -336,26 +400,32 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
 
             {/* کارت‌های خدمات جهت انتخاب با یک کلیک */}
             <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-2.5 pr-1 mt-2">
-              {filteredServices.map((service) => (
-                <button
-                  key={service.id}
-                  type="button"
-                  onClick={() => handleAddService(service)}
-                  className="p-3 rounded-2xl border border-slate-200/90 dark:border-zinc-800 hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 text-right transition-all flex flex-col justify-between group h-20 active:scale-95 bg-white dark:bg-zinc-850/60 shadow-2xs"
-                >
-                  <div className="text-xs font-black text-slate-800 dark:text-zinc-100 line-clamp-2">
-                    {service.title}
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] mt-1 pt-1 border-t border-slate-100 dark:border-zinc-800">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-black">
-                      {formatToman(service.unit_price)}
-                    </span>
-                    <span className="w-5 h-5 rounded-lg bg-slate-100 dark:bg-zinc-750 flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                      <Plus className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-                </button>
-              ))}
+              {filteredServices.length === 0 ? (
+                <div className="col-span-2 text-center py-12 text-slate-400 text-xs">
+                  خدمتی با این عبارت پیدا نشد. می‌توانید با زدن دکمه «خدمت آزاد» آن را فوری وارد کنید.
+                </div>
+              ) : (
+                filteredServices.map((service) => (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => handleAddService(service)}
+                    className="p-3 rounded-2xl border border-slate-200/90 dark:border-zinc-800 hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 text-right transition-all flex flex-col justify-between group h-20 active:scale-95 bg-white dark:bg-zinc-850/60 shadow-2xs"
+                  >
+                    <div className="text-xs font-black text-slate-800 dark:text-zinc-100 line-clamp-2">
+                      {service.title}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] mt-1 pt-1 border-t border-slate-100 dark:border-zinc-800">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                        {formatToman(service.unit_price)}
+                      </span>
+                      <span className="w-5 h-5 rounded-lg bg-slate-100 dark:bg-zinc-750 flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                        <Plus className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
@@ -395,7 +465,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                   <Receipt className="w-10 h-10 mb-2 opacity-30 text-slate-400" />
                   هیچ خدمتی انتخاب نشده است.
                   <span className="text-[11px] mt-1 text-slate-400">
-                    از ستون سمت راست روی خدمات کلیک کنید.
+                    از ستون سمت راست یا تب «پرکاربرد و فوری» انتخاب کنید.
                   </span>
                 </div>
               ) : (
@@ -491,7 +561,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                 />
               </div>
 
-              {/* مبلغ نهایی قابل پرداخت */}
+              {/* مبلغ نهایی */}
               <div className="p-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-200/80 dark:border-emerald-800/50 flex items-center justify-between">
                 <span className="text-xs font-black text-emerald-900 dark:text-emerald-200">
                   مبلغ نهایی دریافتی:
