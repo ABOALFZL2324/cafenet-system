@@ -44,6 +44,13 @@ export const App: React.FC = () => {
   // کلیدهای میانبر سرتاسری نرم‌افزار (Keyboard Shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // بستن سریع مودال‌های باز با Escape
+      if (e.key === 'Escape') {
+        setIsGlobalInvoiceOpen(false);
+        setSelectedInvoiceForPrint(null);
+        return;
+      }
+
       // شورت‌کات سرتاسری ثبت فاکتور جدید (Ctrl + N یا Ctrl + د)
       if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyN' || e.key === 'n' || e.key === 'N' || e.key === 'د')) {
         e.preventDefault();

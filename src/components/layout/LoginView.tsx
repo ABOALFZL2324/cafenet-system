@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { normalizeDigits } from '../../utils/security';
 import { ShieldCheck, UserCheck, ArrowLeft, Keyboard } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
@@ -25,10 +26,12 @@ export const LoginView: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedUserId) return;
 
-      // اعداد 0 تا 9 یا Numpad
-      if (/^[0-9]$/.test(e.key)) {
+      const normalizedKey = normalizeDigits(e.key);
+
+      // اعداد 0 تا 9 (انگلیسی یا فارسی کیبورد)
+      if (/^[0-9]$/.test(normalizedKey)) {
         if (pin.length < 6) {
-          setPin((prev) => prev + e.key);
+          setPin((prev) => prev + normalizedKey);
           setError('');
         }
       } else if (e.key === 'Backspace') {

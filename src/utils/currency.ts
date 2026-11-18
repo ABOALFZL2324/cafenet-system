@@ -12,13 +12,13 @@ export function formatNumber(num: number): string {
 }
 
 export function parseTomanInput(value: string): number {
-  // پاکسازی کاراکترهای غیرعددی (شامل کاما، حروف و ارقام فارسی به انگلیسی)
-  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-  let cleaned = value.trim();
-  for (let i = 0; i < 10; i++) {
-    cleaned = cleaned.replace(new RegExp(persianDigits[i], 'g'), i.toString());
-  }
-  cleaned = cleaned.replace(/[^0-9]/g, '');
+  if (!value) return 0;
+  // پاکسازی و تبدیل ارقام فارسی و عربی به انگلیسی
+  let cleaned = value.trim()
+    .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1728))
+    .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1584))
+    .replace(/[^0-9]/g, '');
+
   const parsed = parseInt(cleaned, 10);
   return isNaN(parsed) ? 0 : parsed;
 }

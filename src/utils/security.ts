@@ -24,6 +24,14 @@ export function quickHash(str: string): string {
   return 'h_' + Math.abs(hash).toString(16);
 }
 
+// تبدیل ارقام فارسی و عربی به ارقام استاندارد انگلیسی
+export function normalizeDigits(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1728))
+    .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1584));
+}
+
 // ضدعفونی‌سازی ورودی‌ها جهت جلوگیری از XSS و تزریق کد (Input Sanitization)
 export function sanitizeInput(input: string): string {
   if (!input) return '';

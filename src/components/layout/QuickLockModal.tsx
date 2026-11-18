@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { normalizeDigits } from '../../utils/security';
 import { Lock, Keyboard } from 'lucide-react';
 
 export const QuickLockModal: React.FC = () => {
@@ -7,14 +8,15 @@ export const QuickLockModal: React.FC = () => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
-  // شنونده کلیدهای فیزیکی کیبورد در حالت قفل
+  // شنونده کلیدهای فیزیکی کیبورد در حالت قفل (با پشتیبانی از کیبورد فارسی و انگلیسی)
   useEffect(() => {
     if (!isLocked) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (/^[0-9]$/.test(e.key)) {
+      const normalizedKey = normalizeDigits(e.key);
+      if (/^[0-9]$/.test(normalizedKey)) {
         if (pin.length < 6) {
-          setPin((prev) => prev + e.key);
+          setPin((prev) => prev + normalizedKey);
           setError('');
         }
       } else if (e.key === 'Backspace') {

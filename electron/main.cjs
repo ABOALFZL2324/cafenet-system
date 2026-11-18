@@ -1,10 +1,13 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
 
 let server = null;
-const PORT = 35173; // پورت اختصاصی داخلی نرم‌افزار
+let mainWindow = null;
+let tray = null;
+let isQuitting = false;
+let activePort = 35173;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -18,6 +21,15 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
 };
 
+// دریافت مسیر آیکون رسمی برنامه
+function getAppIconPath() {
+  const icoPath = path.resolve(__dirname, '../build/icon.ico');
+  if (fs.existsSync(icoPath)) return icoPath;
+  const pngPath = path.resolve(__dirname, '../build/icon.png');
+  if (fs.existsSync(pngPath)) return pngPath;
+  return null;
+}
+
 // تعیین مسیر دائمی و مطمئن فایل پایگاه داده در پوشه داده‌های کاربر ویندوز (AppData)
 function getDatabaseFilePath() {
   const userDataDir = app.getPath('userData');
@@ -25,6 +37,60 @@ function getDatabaseFilePath() {
     fs.mkdirSync(userDataDir, { recursive: true });
   }
   return path.join(userDataDir, 'cafenet_db.json');
+}
+
+// ساخت آیکون و منوی سینی سیستم (کنار ساعت ویندوز)
+function createSystemTray() {
+  const iconPath = getAppIconPath();
+  const trayIcon = iconPath ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty();
+
+  tray = new Tray(trayIcon);
+  tray.setToolTip('سیستم جامع مدیریت کافی‌نت | در حال اجرا');
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '🖥️ نمایش پنجره اصلی برنامه',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+        }
+      },
+    },
+    {
+      label: '🔽 کوچک‌سازی به سینی سیستم (کنار ساعت)',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.hide();
+        }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '❌ خروج کامل از نرم‌افزار',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  // با کلیک یا دابل‌کلیک روی آیکون کنار ساعت، پنجره فورا باز شود
+  const showApp = () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) {
+        mainWindow.show();
+      }
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  };
+
+  tray.on('click', showApp);
+  tray.on('double-click', showApp);
 }
 
 // راه‌اندازی سرور داخلی اختصاصی برای سرویس‌دهی آفلاین و پایدار
@@ -118,19 +184,33 @@ function startInternalServer(callback) {
     });
   });
 
-  server.listen(PORT, '127.0.0.1', () => {
-    console.log(`سرور داخلی دسکتاپ بر روی پورت ${PORT} آماده است.`);
-    callback();
+  // مدیریت خطای احتمالی اشغال بودن پورت با تخصیص هوشمند پورت آزاد
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn('پورت پیش‌فرض اشغال است؛ در حال تخصیص پورت پویا...');
+      server.listen(0, '127.0.0.1');
+    } else {
+      console.error('خطای سرور:', err);
+    }
+  });
+
+  server.listen(activePort, '127.0.0.1', () => {
+    activePort = server.address().port;
+    console.log(`سرور داخلی دسکتاپ بر روی پورت ${activePort} فعال شد.`);
+    callback(activePort);
   });
 }
 
-function createWindow() {
-  const win = new BrowserWindow({
+function createWindow(port) {
+  const iconPath = getAppIconPath();
+
+  mainWindow = new BrowserWindow({
     width: 1300,
     height: 870,
     minWidth: 1024,
     minHeight: 700,
     title: 'سیستم جامع مدیریت کافی‌نت | CafeNet Manager',
+    icon: iconPath || undefined,
     autoHideMenuBar: true,
     backgroundColor: '#09090b',
     webPreferences: {
@@ -139,19 +219,53 @@ function createWindow() {
     },
   });
 
-  win.loadURL(`http://127.0.0.1:${PORT}`);
-}
+  mainWindow.loadURL(`http://127.0.0.1:${port}`);
 
-app.whenReady().then(() => {
-  startInternalServer(() => {
-    createWindow();
-  });
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+  // هنگام زدن ضربدر (بستن پنجره)، برنامه پنهان شده و کنار ساعت می‌رود تا شیفت و حساب‌ها قطع نشوند
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
     }
   });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+// قفل نمونه واحد (Single Instance Lock) - جلوگیری از باز شدن چندباره برنامه و بروز خطای EADDRINUSE
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // اگر نمونه‌ای از قبل باز است، این نمونه بسته شود
+  app.quit();
+} else {
+  // اگر کاربر دوباره روی آیکون کلیک کرد، پنجره قبلی بالا آورده شود
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) mainWindow.show();
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  app.whenReady().then(() => {
+    startInternalServer((port) => {
+      createWindow(port);
+      createSystemTray();
+    });
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow(activePort);
+      }
+    });
+  });
+}
+
+app.on('before-quit', () => {
+  isQuitting = true;
 });
 
 app.on('window-all-closed', () => {

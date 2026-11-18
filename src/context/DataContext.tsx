@@ -15,7 +15,7 @@ import {
 } from '../types';
 import { loadDatabase, saveDatabase, AppDatabaseState, syncDatabaseWithDisk, resetDatabaseToCleanSlate } from '../utils/storage';
 import { isInJalaliMonth } from '../utils/jalali';
-import { sanitizeInput } from '../utils/security';
+import { sanitizeInput, normalizeDigits } from '../utils/security';
 
 interface DataContextType {
   dbState: AppDatabaseState;
@@ -323,7 +323,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: 1,
       full_name: sanitizeInput(setupData.adminUser.full_name),
       username: sanitizeInput(setupData.adminUser.username).toLowerCase() || 'admin',
-      pin_code: setupData.adminUser.pin_code,
+      pin_code: normalizeDigits(setupData.adminUser.pin_code),
       role: 'admin',
       profit_percentage: setupData.adminUser.profit_percentage ?? 100,
       is_active: true,
@@ -340,6 +340,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: idx + 2,
           full_name: sanitizeInput(op.full_name),
           username: sanitizeInput(op.username).toLowerCase(),
+          pin_code: normalizeDigits(op.pin_code),
           role: 'operator',
           is_active: true,
           created_at: new Date().toISOString(),
