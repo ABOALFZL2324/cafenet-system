@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>مدیریت کافی‌نت | CafeNet Manager</title>
+    <!-- وب‌فونت مدرن و چشم‌نواز وزیرمتن (Vazirmatn) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- اسکریپت ضد فلش سفیدی در دارک مود (Anti-White Flash Script) -->
     <script>
       (function() {
@@ -11,16 +15,16 @@
           var isDark = localStorage.getItem('cafenet_dark_mode') === 'true';
           if (isDark) {
             document.documentElement.classList.add('dark');
-            document.documentElement.style.backgroundColor = '#1e1e1e';
+            document.documentElement.style.backgroundColor = '#18181b';
           } else {
             document.documentElement.classList.remove('dark');
-            document.documentElement.style.backgroundColor = '#f3f3f3';
+            document.documentElement.style.backgroundColor = '#f8fafc';
           }
         } catch (e) {}
       })();
     </script>
   </head>
-  <body class="bg-[#f3f3f3] dark:bg-[#1e1e1e] text-slate-800 dark:text-slate-100 font-sans select-none antialiased overflow-hidden">
+  <body class="bg-[#f8fafc] dark:bg-[#121214] text-slate-800 dark:text-slate-100 font-sans select-none antialiased overflow-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

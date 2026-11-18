@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeDigits } from '../../utils/security';
-import { Lock, Keyboard } from 'lucide-react';
+import { Lock, Keyboard, Delete, ShieldAlert } from 'lucide-react';
 
 export const QuickLockModal: React.FC = () => {
   const { currentUser, isLocked, unlockScreen } = useAuth();
@@ -57,25 +57,27 @@ export const QuickLockModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-2xl flex items-center justify-center p-4 no-print">
-      <div className="w-full max-w-sm bg-white dark:bg-zinc-800 rounded-3xl shadow-2xl p-6 text-center border border-slate-200 dark:border-zinc-700">
-        <div className="w-14 h-14 bg-amber-500 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-amber-500/30 mb-3">
-          <Lock className="w-7 h-7" />
+    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-2xl flex items-center justify-center p-4 no-print animate-fade-in select-none">
+      <div className="w-full max-w-sm bg-white dark:bg-[#202024] rounded-3xl shadow-2xl p-7 text-center border border-slate-200/80 dark:border-zinc-800 transition-all">
+        {/* آیکون قفل طلایی درخشان */}
+        <div className="w-16 h-16 bg-gradient-to-tr from-amber-500 to-yellow-500 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-amber-500/30 mb-4 ring-4 ring-amber-500/20">
+          <Lock className="w-8 h-8" />
         </div>
-        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">صفحه قفل است</h3>
-        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 mb-3">
-          متصدی: <strong className="text-slate-700 dark:text-slate-200">{currentUser.full_name}</strong>
+
+        <h3 className="text-base font-black text-slate-800 dark:text-white">صفحه قفل امنیتی است</h3>
+        <p className="text-xs text-slate-400 dark:text-zinc-400 mt-1 mb-5">
+          متصدی حاضر: <strong className="text-slate-700 dark:text-zinc-200 font-bold">{currentUser.full_name}</strong>
         </p>
 
-        {/* فیلد پین */}
-        <div className="flex justify-center gap-2 mb-3">
+        {/* فیلد دایره‌های پین */}
+        <div className="flex justify-center gap-2.5 mb-4">
           {[0, 1, 2, 3].map((idx) => (
             <div
               key={idx}
-              className={`w-10 h-12 rounded-xl border flex items-center justify-center text-xl font-bold transition-all ${
+              className={`w-11 h-12 rounded-2xl border flex items-center justify-center text-2xl font-black transition-all ${
                 pin.length > idx
-                  ? 'bg-amber-500 text-white border-amber-500'
-                  : 'border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900'
+                  ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/30 scale-105'
+                  : 'border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-transparent'
               }`}
             >
               {pin.length > idx ? '●' : ''}
@@ -83,21 +85,25 @@ export const QuickLockModal: React.FC = () => {
           ))}
         </div>
 
-        <div className="text-[11px] text-slate-400 mb-3 flex items-center justify-center gap-1">
-          <Keyboard className="w-3 h-3" />
-          <span>پین‌کد را با کیبورد وارد کرده و اینتر بزنید</span>
+        <div className="text-[11px] text-slate-400 mb-4 flex items-center justify-center gap-1.5 font-medium">
+          <Keyboard className="w-3.5 h-3.5" />
+          <span>پین‌کد را با کیبورد یا دکمه‌های زیر وارد کرده و اینتر بزنید</span>
         </div>
 
-        {error && <div className="text-[11px] text-rose-500 font-semibold mb-3">{error}</div>}
+        {error && (
+          <div className="text-xs text-rose-500 font-black mb-4 bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60">
+            {error}
+          </div>
+        )}
 
-        {/* کیپد */}
+        {/* کیپد عددی */}
         <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <button
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-700/60 dark:hover:bg-zinc-700 text-sm font-bold text-slate-800 dark:text-slate-100 transition-all active:scale-95"
+              className="h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-base font-black text-slate-800 dark:text-white transition-all active:scale-95 shadow-2xs"
             >
               {digit}
             </button>
@@ -105,23 +111,23 @@ export const QuickLockModal: React.FC = () => {
           <button
             type="button"
             onClick={handleDelete}
-            className="h-10 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950/40 text-xs font-semibold"
+            className="h-11 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 flex items-center justify-center transition-all active:scale-95"
           >
-            پاک کردن
+            <Delete className="w-5 h-5" />
           </button>
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-700/60 text-sm font-bold text-slate-800 dark:text-slate-100"
+            className="h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-base font-black text-slate-800 dark:text-white transition-all active:scale-95 shadow-2xs"
           >
             0
           </button>
           <button
             type="button"
             onClick={handleUnlock}
-            className="h-10 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20"
+            className="h-11 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs transition-all active:scale-95 shadow-md shadow-amber-500/30"
           >
-            تایید
+            بازگشایی
           </button>
         </div>
       </div>

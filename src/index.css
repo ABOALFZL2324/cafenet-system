@@ -7,23 +7,33 @@
     user-select: none;
     -webkit-user-select: none;
     font-feature-settings: "ss01", "ss02";
-    background-color: #f3f3f3;
-    color: #1e293b;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background-color: #f8fafc;
+    color: #0f172a;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark body {
-    background-color: #1e1e1e;
-    color: #f1f5f9;
+    background-color: #121214;
+    color: #f8fafc;
   }
 
   /* تنظیمات سراسری اینپوت‌ها در دارک مود جهت جلوگیری از هرگونه سفیدی ناخواسته */
   .dark input:not([type="checkbox"]):not([type="radio"]),
   .dark select,
   .dark textarea {
-    background-color: #262626 !important;
+    background-color: #1e1e24 !important;
     color: #f8fafc !important;
-    border-color: #3f3f46 !important;
+    border-color: #383842 !important;
+  }
+
+  .dark input:focus:not([type="checkbox"]):not([type="radio"]),
+  .dark select:focus,
+  .dark textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
   }
 
   .dark input::placeholder,
@@ -32,7 +42,7 @@
   }
 
   .dark select option {
-    background-color: #262626;
+    background-color: #1e1e24;
     color: #f8fafc;
   }
 }
