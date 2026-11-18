@@ -2,6 +2,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 
 let server = null;
 let mainWindow = null;
@@ -93,7 +94,21 @@ function createSystemTray() {
   tray.on('double-click', showApp);
 }
 
-// راه‌اندازی سرور داخلی اختصاصی برای سرویس‌دهی آفلاین و پایدار
+// استخراج آدرس‌های IP محلی سیستم در شبکه LAN
+function getLocalIpAddresses() {
+  const interfaces = os.networkInterfaces();
+  const addresses = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        addresses.push(iface.address);
+      }
+    }
+  }
+  return addresses;
+}
+
+// راه‌اندازی سرور داخلی اختصاصی برای سرویس‌دهی آفلاین، پایدار و شبکه محلی (LAN)
 function startInternalServer(callback) {
   const DIST_DIR = path.resolve(__dirname, '../dist');
   const DB_FILE_PATH = getDatabaseFilePath();
@@ -111,7 +126,40 @@ function startInternalServer(callback) {
   }
 
   server = http.createServer((req, res) => {
+    // هدرهای مجاز شبکه و CORS برای ارتباط کلاینت‌های دیگر در شبکه مغازه
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     let reqPath = req.url.split('?')[0];
+
+    // تست وضعیت سلامت و در دسترس بودن سرور شبکه
+    if (reqPath === '/api/ping') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ status: 'ok', role: 'cafenet-server', version: '1.0.0' }));
+      return;
+    }
+
+    // دریافت اطلاعات شبکه و آدرس‌های IP سیستم اصلی برای اتصال سیستم‌های دوم
+    if (reqPath === '/api/network-info') {
+      const ips = getLocalIpAddresses();
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          port: activePort,
+          ips: ips,
+          primaryIp: ips[0] || '127.0.0.1',
+          serverUrl: `http://${ips[0] || '127.0.0.1'}:${activePort}`,
+        })
+      );
+      return;
+    }
 
     // اندپوینت ذخیره و بازیابی دائمی اطلاعات در هارد دیسک
     if (reqPath === '/api/database') {
@@ -188,15 +236,16 @@ function startInternalServer(callback) {
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.warn('پورت پیش‌فرض اشغال است؛ در حال تخصیص پورت پویا...');
-      server.listen(0, '127.0.0.1');
+      server.listen(0, '0.0.0.0');
     } else {
       console.error('خطای سرور:', err);
     }
   });
 
-  server.listen(activePort, '127.0.0.1', () => {
+  // گوش دادن به تمام کارت‌های شبکه (0.0.0.0) جهت دسترسی سایر سیستم‌های مغازه در شبکه LAN
+  server.listen(activePort, '0.0.0.0', () => {
     activePort = server.address().port;
-    console.log(`سرور داخلی دسکتاپ بر روی پورت ${activePort} فعال شد.`);
+    console.log(`سرور شبکه محلی کافی‌نت بر روی پورت ${activePort} فعال شد.`);
     callback(activePort);
   });
 }

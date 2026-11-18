@@ -9,6 +9,7 @@ import {
   MonthlySettlementRecord,
   CafeNetSettings,
 } from '../types';
+import { getServerBaseUrl } from './network';
 
 export interface AppDatabaseState {
   users: User[];
@@ -72,33 +73,39 @@ export function loadDatabase(): AppDatabaseState {
   }
 }
 
-// ذخیره قطعی دیتابیس (همگام‌سازی همزمان در localStorage و فایل فیزیکی هارد دیسک)
+// ذخیره قطعی دیتابیس (همگام‌سازی همزمان در حافظه محلی و سرور شبکه هارد دیسک)
 export function saveDatabase(data: AppDatabaseState): void {
   try {
     const serialized = JSON.stringify(data);
     localStorage.setItem(STORAGE_KEY, serialized);
 
-    // همگام‌سازی فوری و پایدار با سرور داخلی و نوشتن در فایل cafenet_db.json هارد دیسک
+    const baseUrl = getServerBaseUrl();
+    const endpoint = `${baseUrl}/api/database`;
+
+    // همگام‌سازی فوری و پایدار با سرور (چه در سیستم اصلی و چه در سیستم کلاینت شبکه)
     if (typeof fetch !== 'undefined') {
-      fetch('/api/database', {
+      fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: serialized,
       }).catch((err) => {
-        // در صورت عدم دسترسی موقت به سرور، داده در localStorage محفوظ است
-        console.warn('عدم همگام‌سازی فایل هارد دیسک:', err);
+        // در صورت عدم دسترسی موقت به سرور، داده در حافظه کلاینت محفوظ است
+        console.warn('عدم امکان همگام‌سازی شبکه با دیتابیس:', err);
       });
     }
   } catch (error) {
-    console.error('خطا در ذخیره پایگاه داده محلی:', error);
+    console.error('خطا در ذخیره پایگاه داده:', error);
   }
 }
 
-// همگام‌سازی اولیه دیتابیس از روی فایل فیزیکی دیسک سخت
+// همگام‌سازی اولیه و برخط دیتابیس از روی سرور سیستم اصلی
 export async function syncDatabaseWithDisk(): Promise<AppDatabaseState | null> {
   try {
     if (typeof fetch === 'undefined') return null;
-    const res = await fetch('/api/database');
+    const baseUrl = getServerBaseUrl();
+    const endpoint = `${baseUrl}/api/database`;
+
+    const res = await fetch(endpoint);
     if (res.ok) {
       const diskData = await res.json();
       if (diskData && diskData.users && Array.isArray(diskData.users)) {
@@ -108,7 +115,7 @@ export async function syncDatabaseWithDisk(): Promise<AppDatabaseState | null> {
       }
     }
   } catch (err) {
-    console.warn('امکان اتصال به فایل دیسک در استارت‌آپ وجود ندارد:', err);
+    console.warn('امکان اتصال به سرور دیتابیس در استارت‌آپ وجود ندارد:', err);
   }
   return null;
 }

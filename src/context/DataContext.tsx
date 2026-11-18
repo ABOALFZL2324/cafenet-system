@@ -80,6 +80,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setDbState(diskState);
       }
     });
+
+    // همگام‌سازی زنده و سبک در شبکه محلی مغازه (LAN Live Sync هر ۴ ثانیه)
+    const interval = setInterval(() => {
+      syncDatabaseWithDisk().then((diskState) => {
+        if (diskState) {
+          setDbState(diskState);
+        }
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const addInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoice_number' | 'created_at'>): Invoice => {
