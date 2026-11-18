@@ -393,7 +393,7 @@ export const PendingOrdersView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2.5 border rounded-xl text-xs font-medium"
+                  className="px-4 py-2.5 border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-xl text-xs font-medium transition-colors"
                 >
                   انصراف
                 </button>

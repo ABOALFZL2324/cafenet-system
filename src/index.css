@@ -7,7 +7,61 @@
     user-select: none;
     -webkit-user-select: none;
     font-feature-settings: "ss01", "ss02";
+    background-color: #f3f3f3;
+    color: #1e293b;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
+
+  .dark body {
+    background-color: #1e1e1e;
+    color: #f1f5f9;
+  }
+
+  /* تنظیمات سراسری اینپوت‌ها در دارک مود جهت جلوگیری از هرگونه سفیدی ناخواسته */
+  .dark input:not([type="checkbox"]):not([type="radio"]),
+  .dark select,
+  .dark textarea {
+    background-color: #262626 !important;
+    color: #f8fafc !important;
+    border-color: #3f3f46 !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #71717a !important;
+  }
+
+  .dark select option {
+    background-color: #262626;
+    color: #f8fafc;
+  }
+}
+
+/* اسکرول‌بار فوق‌العاده مدرن و مینیمال ویندوز ۱۱ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }
 
 /* ========================================================= */
@@ -27,7 +81,6 @@
     visibility: hidden !important;
   }
 
-  /* مخفی کردن تمام رابط کاربری، نوارها، مودال و پس‌زمینه‌ها */
   #root > *,
   header,
   aside,
@@ -38,7 +91,6 @@
     visibility: hidden !important;
   }
 
-  /* فقط کادر قابل چاپ را به اول صفحه بیاور و نمایش بده */
   #printable-invoice,
   #printable-settlement {
     visibility: visible !important;
@@ -53,7 +105,7 @@
     color: #000000 !important;
   }
 
-  #printable-invoice * ,
+  #printable-invoice *,
   #printable-settlement * {
     visibility: visible !important;
   }

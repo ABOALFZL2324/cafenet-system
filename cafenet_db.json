@@ -1,0 +1,28 @@
+{
+  "users": [],
+  "shifts": [],
+  "serviceCategories": [
+    { "id": 1, "name": "چاپ، تکثیر و اسکن", "is_active": true },
+    { "id": 2, "name": "ثبت‌نام‌های اینترنتی و آزمون‌ها", "is_active": true },
+    { "id": 3, "name": "خدمات مالیاتی، بیمه و بازنشستگی", "is_active": true },
+    { "id": 4, "name": "خدمات قضایی، انتظامی و خلافی", "is_active": true },
+    { "id": 5, "name": "تایپ، ترجمه، صحافی و دانشجویی", "is_active": true },
+    { "id": 6, "name": "لوازم جانبی کامپیوتر و تحریر", "is_active": true }
+  ],
+  "services": [],
+  "invoices": [],
+  "expenses": [],
+  "pendingOrders": [],
+  "settlements": [],
+  "settings": {
+    "name": "",
+    "phone": "",
+    "address": "",
+    "invoice_footer_note": "با تشکر از اعتماد شما - مدارک دریافتی تا ۴۸ ساعت معتبر می‌باشند.",
+    "default_settlement_model": "total_share",
+    "default_employer_percentage": 50,
+    "is_initialized": false
+  },
+  "activeShiftId": null,
+  "activeUserId": null
+}

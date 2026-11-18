@@ -28,14 +28,65 @@ const SECURITY_HEADERS = {
 };
 
 const server = http.createServer((req, res) => {
-  // محدود کردن متدهای مجاز
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
+  let reqPath = req.url.split('?')[0];
+
+  // اندپوینت اختصاصی ذخیره و بازیابی دائمی دیتابیس روی هارد دیسک ویندوز
+  if (reqPath === '/api/database') {
+    const DB_FILE_PATH = path.resolve(__dirname, 'cafenet_db.json');
+
+    if (req.method === 'GET') {
+      if (fs.existsSync(DB_FILE_PATH)) {
+        try {
+          const fileContent = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', ...SECURITY_HEADERS });
+          res.end(fileContent);
+          return;
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
+          res.end(JSON.stringify({ error: 'Failed to read database file' }));
+          return;
+        }
+      } else {
+        res.writeHead(404, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
+        res.end(JSON.stringify({ notFound: true }));
+        return;
+      }
+    }
+
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+        if (body.length > 50 * 1024 * 1024) {
+          req.destroy();
+        }
+      });
+      req.on('end', () => {
+        try {
+          // اعتبارسنجی ساختار قبل از ذخیره فیزیکی
+          JSON.parse(body);
+          fs.writeFileSync(DB_FILE_PATH, body, 'utf-8');
+          res.writeHead(200, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
+          res.end(JSON.stringify({ success: true, savedAt: new Date().toISOString() }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json', ...SECURITY_HEADERS });
+          res.end(JSON.stringify({ error: 'Invalid JSON data' }));
+        }
+      });
+      return;
+    }
+
     res.writeHead(405, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS });
     res.end('Method Not Allowed');
     return;
   }
 
-  let reqPath = req.url.split('?')[0];
+  // محدود کردن متدهای مجاز برای فایل‌های استاتیک
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.writeHead(405, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS });
+    res.end('Method Not Allowed');
+    return;
+  }
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/index.html';
   }

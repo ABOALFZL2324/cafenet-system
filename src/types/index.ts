@@ -11,13 +11,22 @@ export interface User {
   role: UserRole;
   profit_percentage: number; // درصد سهم از سود (مثلا ۳۰)
   is_active: boolean;
+  is_deleted?: boolean; // حذف منطقی (Soft Delete) جهت محافظت ۱۰۰٪ از سوابق تراکنش‌ها
+  deleted_at?: string;
   created_at: string;
+}
+
+export interface ShiftWorker {
+  user_id: number;
+  user_name: string;
+  hours?: number; // تعداد ساعات کارکرد ثبت‌شده در این شیفت
 }
 
 export interface Shift {
   id: number;
-  user_id: number;
+  user_id: number; // کاربر بازکننده یا متصدی مسئول شیفت
   user_name?: string;
+  workers?: ShiftWorker[]; // کارگران و پرسنل همزمان حاضر در این شیفت
   start_time: string; // ISO String
   end_time: string | null;
   handover_note?: string; // یادداشت تحویل شیفت
@@ -96,7 +105,7 @@ export interface PendingOrder {
   created_at: string;
 }
 
-export type SettlementModel = 'total_share' | 'individual_performance';
+export type SettlementModel = 'total_share' | 'individual_performance' | 'hourly_attendance';
 
 export interface MonthlySettlementRecord {
   id: number;
@@ -106,10 +115,16 @@ export interface MonthlySettlementRecord {
   total_income: number;
   total_expense: number;
   net_profit: number;
+  employer_percentage?: number; // درصد سهم کارفرما (در مدل تسویه ساعتی)
+  employer_amount?: number; // مبلغ ریالی سهم کارفرما (تومان)
+  total_workers_hours?: number; // مجموع ساعات کارکرد همه پرسنل در این ماه
+  hourly_rate_budget?: number; // ارزش ریالی هر ساعت کارکرد پرسنل در این ماه
   details: {
     user_id: number;
     user_name: string;
     profit_percentage: number;
+    hours_worked?: number; // مجموع ساعت کارکرد در این ماه (مثلاً ۱۲۴.۵ ساعت)
+    hourly_share_amount?: number; // سهم حاصل از ساعت کارکرد
     user_income: number;
     user_allocated_expense: number;
     user_net_profit: number;
@@ -128,4 +143,6 @@ export interface CafeNetSettings {
   logo_url?: string; // تصویر لوگوی کافی‌نت به صورت Base64
   invoice_footer_note: string; // متن پیام پایین فاکتور
   default_settlement_model: SettlementModel;
+  default_employer_percentage?: number; // درصد پیش‌فرض کارفرما در مدل ساعتی (مثلاً ۵۰)
+  is_initialized?: boolean; // وضعیت راه‌اندازی اولیه سیستم (خام یا فعال)
 }

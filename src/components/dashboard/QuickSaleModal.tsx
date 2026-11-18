@@ -8,8 +8,8 @@ import { Receipt, Plus, Trash2, Check, X, Search, Calculator, Sparkles } from 'l
 interface QuickSaleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenPrintCalc: () => void;
-  onViewInvoice: (invoiceId: number) => void;
+  onOpenPrintCalc?: () => void;
+  onViewInvoice?: (invoiceId: number) => void;
 }
 
 export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
@@ -145,7 +145,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
     });
 
     onClose();
-    if (shouldPrint) {
+    if (shouldPrint && onViewInvoice) {
       onViewInvoice(created.id);
     }
   };
@@ -181,14 +181,16 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={onOpenPrintCalc}
-                className="px-3 h-10 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700/50 text-xs font-semibold flex items-center gap-1.5 hover:bg-blue-100 transition-colors shrink-0"
-              >
-                <Calculator className="w-4 h-4" />
-                محاسبه پرینت
-              </button>
+              {onOpenPrintCalc && (
+                <button
+                  type="button"
+                  onClick={onOpenPrintCalc}
+                  className="px-3 h-10 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700/50 text-xs font-semibold flex items-center gap-1.5 hover:bg-blue-100 transition-colors shrink-0"
+                >
+                  <Calculator className="w-4 h-4" />
+                  محاسبه پرینت
+                </button>
+              )}
 
               <button
                 type="button"
@@ -297,11 +299,11 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
           </div>
 
           {/* ستون چپ: سبد اقلام فاکتور و تسویه */}
-          <div className="w-5/12 p-4 flex flex-col justify-between bg-slate-50/50 dark:bg-zinc-800/40">
+          <div className="w-5/12 p-4 flex flex-col justify-between bg-slate-50/50 dark:bg-zinc-900/60 border-r border-slate-100 dark:border-zinc-750">
             {/* اطلاعات مشتری (اختیاری) */}
             <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   نام مشتری (اختیاری):
                 </label>
                 <input
@@ -309,11 +311,11 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                   placeholder="مشتری عمومی"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full h-8 px-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs"
+                  className="w-full h-8 px-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-slate-800 dark:text-slate-100"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   شماره تماس (اختیاری):
                 </label>
                 <input
@@ -321,17 +323,17 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                   placeholder="۰۹۱۲..."
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full h-8 px-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs text-left"
+                  className="w-full h-8 px-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-slate-800 dark:text-slate-100 text-left font-mono"
                   dir="ltr"
                 />
               </div>
             </div>
 
             {/* لیست اقلام ثبت‌شده در فاکتور */}
-            <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 p-2 space-y-2 mb-3">
+            <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-850 p-2 space-y-2 mb-3">
               {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">
-                  <Receipt className="w-8 h-8 stroke-1 mb-2 text-slate-300" />
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 text-xs">
+                  <Receipt className="w-8 h-8 stroke-1 mb-2 text-slate-300 dark:text-zinc-600" />
                   خدمات مورد نظر را از ستون راست یا دکمه «خدمت آزاد» انتخاب کنید.
                 </div>
               ) : (
@@ -341,10 +343,10 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                     className="p-2 rounded-lg bg-slate-50 dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 flex items-center justify-between gap-2 text-xs"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      <div className="font-bold text-slate-800 dark:text-slate-100 truncate">
                         {item.service_title}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-slate-400 dark:text-zinc-400">
                         {formatToman(item.unit_price)}
                       </div>
                     </div>
@@ -354,7 +356,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleUpdateQty(item.id, 1)}
-                        className="w-5 h-5 flex items-center justify-center text-blue-600 hover:bg-blue-50 rounded"
+                        className="w-5 h-5 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded font-bold"
                       >
                         +
                       </button>
@@ -364,13 +366,13 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleUpdateQty(item.id, -1)}
-                        className="w-5 h-5 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded"
+                        className="w-5 h-5 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded font-bold"
                       >
                         -
                       </button>
                     </div>
 
-                    <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                    <div className="font-black text-slate-800 dark:text-slate-100 text-xs">
                       {formatToman(item.total_price)}
                     </div>
 
@@ -387,7 +389,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
             </div>
 
             {/* بخش تسویه، تخفیف و روش پرداخت */}
-            <div className="bg-white dark:bg-zinc-900 p-3 rounded-xl border border-slate-200 dark:border-zinc-700 space-y-2 shrink-0">
+            <div className="bg-white dark:bg-zinc-850 p-3 rounded-xl border border-slate-200 dark:border-zinc-700 space-y-2 shrink-0">
               {/* روش پرداخت */}
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -396,7 +398,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                   className={`py-2 rounded-lg text-xs font-bold border transition-all ${
                     paymentMethod === 'pos'
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'border-slate-200 dark:border-zinc-700 text-slate-600'
+                      : 'border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
                   }`}
                 >
                   کارت‌خوان (POS)
@@ -407,7 +409,7 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
                   className={`py-2 rounded-lg text-xs font-bold border transition-all ${
                     paymentMethod === 'cash'
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'border-slate-200 dark:border-zinc-700 text-slate-600'
+                      : 'border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
                   }`}
                 >
                   نقدی (صندوق)
@@ -416,19 +418,19 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
 
               {/* تخفیف */}
               <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-slate-500">تخفیف (اختیاری):</span>
+                <span className="text-slate-500 dark:text-zinc-400">تخفیف (اختیاری):</span>
                 <input
                   type="text"
                   value={discountStr}
                   onChange={(e) => setDiscountStr(e.target.value)}
-                  className="w-28 h-7 px-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-left text-xs"
+                  className="w-28 h-7 px-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-slate-100 text-left text-xs font-mono"
                   placeholder="۰"
                   dir="ltr"
                 />
               </div>
 
               {/* جمع کل نهایی */}
-              <div className="flex items-center justify-between text-sm font-extrabold pt-2 border-t border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between text-sm font-extrabold pt-2 border-t border-slate-100 dark:border-zinc-750">
                 <span className="text-slate-800 dark:text-slate-100">مبلغ قابل دریافت:</span>
                 <span className="text-emerald-600 dark:text-emerald-400 text-base">
                   {formatToman(finalAmount)}

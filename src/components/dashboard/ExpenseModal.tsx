@@ -63,11 +63,11 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 no-print">
       <div className="w-full max-w-lg bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-700 p-6 text-right">
         {/* هدر */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-700">
-          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-sm">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-750">
+          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-extrabold text-sm">
             <ArrowDownCircle className="w-5 h-5" />
             <span>ثبت هزینه اختصاصی مغازه (کافی‌نت)</span>
           </div>
@@ -76,7 +76,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
           </button>
         </div>
 
-        <p className="text-[11px] text-slate-500 mt-2">
+        <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-2">
           * توجه: تنها هزینه‌های واقعی مربوط به کافی‌نت ثبت شوند؛ این مبالغ در پایان ماه از سود کل کسر خواهند شد.
         </p>
 
@@ -92,7 +92,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
                   key={qt}
                   type="button"
                   onClick={() => setTitle(qt)}
-                  className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-700/60 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300 transition-colors"
+                  className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-700/80 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-200 transition-colors"
                 >
                   {qt}
                 </button>
@@ -111,7 +111,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
               placeholder="مثلا: خرید ۲ بسته کاغذ دابل A"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-xs"
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-slate-100 text-xs font-semibold"
             />
           </div>
 
@@ -127,13 +127,13 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
                 placeholder="مثلا: ۲۵۰,۰۰۰"
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 font-bold text-sm text-left pl-14"
+                className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-slate-100 font-bold text-sm text-left pl-14 font-mono"
                 dir="ltr"
               />
               <span className="absolute left-3 top-3 text-xs text-slate-400 font-medium">تومان</span>
             </div>
             {amountStr && (
-              <div className="text-[11px] text-blue-600 font-medium mt-1">
+              <div className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-1">
                 {formatToman(parseTomanInput(amountStr))}
               </div>
             )}
@@ -150,8 +150,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
                 onClick={() => setPaymentMethod('cash')}
                 className={`py-2 rounded-xl border text-xs font-bold transition-all ${
                   paymentMethod === 'cash'
-                    ? 'border-rose-600 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                    : 'border-slate-200 dark:border-zinc-700 text-slate-600'
+                    ? 'border-rose-600 bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-600'
+                    : 'border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-750'
                 }`}
               >
                 پرداخت از صندوق نقدی
@@ -161,8 +161,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
                 onClick={() => setPaymentMethod('pos')}
                 className={`py-2 rounded-xl border text-xs font-bold transition-all ${
                   paymentMethod === 'pos'
-                    ? 'border-rose-600 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                    : 'border-slate-200 dark:border-zinc-700 text-slate-600'
+                    ? 'border-rose-600 bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-600'
+                    : 'border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-750'
                 }`}
               >
                 کارتخوان / حساب بانکی مغازه
@@ -180,7 +180,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
               placeholder="توضیحات یا شماره فاکتور خرید..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-xs resize-none"
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-slate-100 text-xs resize-none"
             />
           </div>
 
@@ -190,7 +190,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
           <div className="flex gap-2 pt-2">
             <button
               type="submit"
-              className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-rose-500/20"
+              className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-rose-500/20 active:scale-95 transition-all"
             >
               <Check className="w-4 h-4" />
               ثبت قطعی هزینه مغازه
@@ -198,7 +198,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({ isOpen, onClose }) =
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-3 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-100"
+              className="px-4 py-3 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-100 dark:hover:bg-zinc-700"
             >
               انصراف
             </button>

@@ -8,6 +8,10 @@ export default {
   theme: {
     extend: {
       colors: {
+        zinc: {
+          750: '#303036',
+          850: '#202024',
+        },
         fluent: {
           bg: '#f3f3f3',
           card: '#ffffff',

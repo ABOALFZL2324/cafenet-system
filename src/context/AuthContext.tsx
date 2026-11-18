@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Shift } from '../types';
+import { User, Shift, ShiftWorker } from '../types';
 import { loadDatabase, saveDatabase } from '../utils/storage';
 import { checkLoginAttempts, recordFailedAttempt, resetFailedAttempts } from '../utils/security';
 
@@ -11,8 +11,9 @@ interface AuthContextType {
   logout: () => void;
   lockScreen: () => void;
   unlockScreen: (pin: string) => { success: boolean; message?: string };
-  startShift: () => void;
-  endShift: (handoverNote?: string) => void;
+  startShift: (additionalWorkerIds?: number[]) => void;
+  updateShiftWorkers: (workers: ShiftWorker[]) => void;
+  endShift: (handoverNote?: string, workersHours?: { user_id: number; hours: number }[]) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -123,14 +124,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, message: 'پین‌کد اشتباه است.' };
   };
 
-  const startShift = () => {
+  const startShift = (additionalWorkerIds?: number[]) => {
     if (!currentUser) return;
     const db = loadDatabase();
+
+    const workers: ShiftWorker[] = [
+      { user_id: currentUser.id, user_name: currentUser.full_name },
+    ];
+
+    if (additionalWorkerIds && additionalWorkerIds.length > 0) {
+      additionalWorkerIds.forEach((wId) => {
+        if (wId !== currentUser.id) {
+          const userObj = db.users.find((u) => u.id === wId);
+          if (userObj) {
+            workers.push({ user_id: userObj.id, user_name: userObj.full_name });
+          }
+        }
+      });
+    }
 
     const newShift: Shift = {
       id: Date.now(),
       user_id: currentUser.id,
       user_name: currentUser.full_name,
+      workers,
       start_time: new Date().toISOString(),
       end_time: null,
       status: 'active',
@@ -142,16 +159,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentShift(newShift);
   };
 
-  const endShift = (handoverNote?: string) => {
+  const updateShiftWorkers = (workers: ShiftWorker[]) => {
     if (!currentShift) return;
     const db = loadDatabase();
     const shiftIdx = db.shifts.findIndex((s) => s.id === currentShift.id);
     if (shiftIdx !== -1) {
-      db.shifts[shiftIdx].end_time = new Date().toISOString();
+      db.shifts[shiftIdx].workers = workers;
+      saveDatabase(db);
+      setCurrentShift({ ...db.shifts[shiftIdx] });
+    }
+  };
+
+  const endShift = (handoverNote?: string, workersHours?: { user_id: number; hours: number }[]) => {
+    if (!currentShift) return;
+    const db = loadDatabase();
+    const shiftIdx = db.shifts.findIndex((s) => s.id === currentShift.id);
+    if (shiftIdx !== -1) {
+      const endTime = new Date().toISOString();
+      db.shifts[shiftIdx].end_time = endTime;
       db.shifts[shiftIdx].status = 'closed';
       if (handoverNote) {
         db.shifts[shiftIdx].handover_note = handoverNote;
       }
+
+      // محاسبه طول شیفت بر اساس ساعت
+      const startTimeMs = new Date(db.shifts[shiftIdx].start_time).getTime();
+      const endTimeMs = new Date(endTime).getTime();
+      const shiftDurationHours = Math.max(0.01, Number(((endTimeMs - startTimeMs) / (1000 * 3600)).toFixed(2)));
+
+      // ثبت و تثبیت ساعت کاری هر یک از کارگران و حاضرین در این شیفت
+      let finalWorkers: ShiftWorker[] = db.shifts[shiftIdx].workers || [
+        { user_id: db.shifts[shiftIdx].user_id, user_name: db.shifts[shiftIdx].user_name || '' },
+      ];
+
+      finalWorkers = finalWorkers.map((w) => {
+        const customEntry = workersHours?.find((wh) => wh.user_id === w.user_id);
+        const resolvedHours = customEntry !== undefined ? customEntry.hours : (w.hours ?? shiftDurationHours);
+        return {
+          ...w,
+          hours: resolvedHours,
+        };
+      });
+
+      // اگر کاربرانی در workersHours اضافه شده‌اند که در لیست اولیه نبودند
+      if (workersHours) {
+        workersHours.forEach((wh) => {
+          if (!finalWorkers.some((w) => w.user_id === wh.user_id)) {
+            const userObj = db.users.find((u) => u.id === wh.user_id);
+            finalWorkers.push({
+              user_id: wh.user_id,
+              user_name: userObj ? userObj.full_name : `کاربر ${wh.user_id}`,
+              hours: wh.hours,
+            });
+          }
+        });
+      }
+
+      db.shifts[shiftIdx].workers = finalWorkers;
     }
     db.activeShiftId = null;
     saveDatabase(db);
@@ -169,6 +233,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lockScreen,
         unlockScreen,
         startShift,
+        updateShiftWorkers,
         endShift,
       }}
     >

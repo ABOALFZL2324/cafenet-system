@@ -16,10 +16,17 @@ import { MonthlySettlementView } from './components/settlement/MonthlySettlement
 import { AnalyticsView } from './components/analytics/AnalyticsView';
 import { UsersView } from './components/users/UsersView';
 import { SettingsView } from './components/settings/SettingsView';
+import { QuickSaleModal } from './components/dashboard/QuickSaleModal';
+import { InvoiceViewModal } from './components/invoices/InvoiceViewModal';
+import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
+import { useData } from './context/DataContext';
 
 export const App: React.FC = () => {
   const { currentUser, isLocked, lockScreen } = useAuth();
+  const { users, settings } = useData();
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
+  const [isGlobalInvoiceOpen, setIsGlobalInvoiceOpen] = useState(false);
+  const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<number | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('cafenet_dark_mode') === 'true';
   });
@@ -37,6 +44,13 @@ export const App: React.FC = () => {
   // کلیدهای میانبر سرتاسری نرم‌افزار (Keyboard Shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // شورت‌کات سرتاسری ثبت فاکتور جدید (Ctrl + N یا Ctrl + د)
+      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyN' || e.key === 'n' || e.key === 'N' || e.key === 'د')) {
+        e.preventDefault();
+        setIsGlobalInvoiceOpen(true);
+        return;
+      }
+
       // قفل سریع صفحه با Alt + L
       if (e.altKey && (e.key === 'l' || e.key === 'L' || e.key === 'م')) {
         e.preventDefault();
@@ -73,6 +87,11 @@ export const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lockScreen]);
+
+  // اگر سیستم هنوز راه‌اندازی نشده یا فاقد کاربر است، ویزارد راه‌اندازی اولیه و ورود اکسل اجرا شود
+  if (!settings.is_initialized || users.length === 0) {
+    return <OnboardingWizard />;
+  }
 
   // اگر کاربری لاگین نکرده باشد، صفحه لاگین را نشان بده
   if (!currentUser) {
@@ -114,6 +133,11 @@ export const App: React.FC = () => {
       {/* نوار راهنمای کلیدهای میانبر سریع */}
       <div className="h-6 bg-slate-200/80 dark:bg-zinc-850 border-b border-slate-300/60 dark:border-zinc-700/60 px-4 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 no-print select-none">
         <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+            <kbd className="px-1.5 py-0.5 bg-emerald-600 text-white rounded font-black shadow-sm">Ctrl + N</kbd>
+            ثبت فاکتور سریع
+          </span>
+          <span className="text-slate-300 dark:text-zinc-600">|</span>
           <span>میانبرها:</span>
           <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F1</kbd> داشبورد</span>
           <span><kbd className="px-1 py-0.5 bg-white dark:bg-zinc-800 rounded border border-slate-300 dark:border-zinc-600 font-bold">F2</kbd> سفارشات معلق</span>
@@ -140,6 +164,19 @@ export const App: React.FC = () => {
 
       {/* پنجره قفل سریع صفحه */}
       <QuickLockModal />
+
+      {/* مودال سرتاسری ثبت فاکتور سریع (Ctrl + N) */}
+      <QuickSaleModal
+        isOpen={isGlobalInvoiceOpen}
+        onClose={() => setIsGlobalInvoiceOpen(false)}
+        onViewInvoice={(id) => setSelectedInvoiceForPrint(id)}
+      />
+
+      {/* مودال چاپ ایزوله فاکتور */}
+      <InvoiceViewModal
+        invoiceId={selectedInvoiceForPrint}
+        onClose={() => setSelectedInvoiceForPrint(null)}
+      />
     </div>
   );
 };

@@ -26,40 +26,9 @@ export interface AppDatabaseState {
 
 const STORAGE_KEY = 'cafenet_manager_database_v1';
 
-// داده‌های اولیه استاندارد کافی‌نت برای راه‌اندازی بار اول (قابل ویرایش ۱۰۰٪ توسط کاربر)
+// داده‌های اولیه استاندارد و خام کافی‌نت برای راه‌اندازی گام‌به‌گام (Onboarding)
 export const INITIAL_DATABASE_STATE: AppDatabaseState = {
-  users: [
-    {
-      id: 1,
-      username: 'admin',
-      pin_code: '1234',
-      full_name: 'مدیریت کافی‌نت',
-      role: 'admin',
-      profit_percentage: 40,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      username: 'operator1',
-      pin_code: '1111',
-      full_name: 'همکار شیفت الف',
-      role: 'operator',
-      profit_percentage: 30,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 3,
-      username: 'operator2',
-      pin_code: '2222',
-      full_name: 'همکار شیفت ب',
-      role: 'operator',
-      profit_percentage: 30,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    },
-  ],
+  users: [],
   shifts: [],
   serviceCategories: [
     { id: 1, name: 'چاپ، تکثیر و اسکن', is_active: true },
@@ -69,37 +38,19 @@ export const INITIAL_DATABASE_STATE: AppDatabaseState = {
     { id: 5, name: 'تایپ، ترجمه، صحافی و دانشجویی', is_active: true },
     { id: 6, name: 'لوازم جانبی کامپیوتر و تحریر', is_active: true },
   ],
-  services: [
-    { id: 1, category_id: 1, title: 'پرینت تک‌رو سیاه سفید (A4)', unit_price: 3000, is_active: true },
-    { id: 2, category_id: 1, title: 'پرینت دورو سیاه سفید (A4)', unit_price: 5000, is_active: true },
-    { id: 3, category_id: 1, title: 'پرینت رنگی (A4)', unit_price: 15000, is_active: true },
-    { id: 4, category_id: 1, title: 'اسکن مدارک و اسناد (هر برگ)', unit_price: 5000, is_active: true },
-    { id: 5, category_id: 1, title: 'فتوکپی سیاه سفید (هر برگ)', unit_price: 3000, is_active: true },
-    { id: 6, category_id: 2, title: 'ثبت‌نام خودرو (ایران خودرو / سایپا)', unit_price: 150000, is_active: true },
-    { id: 7, category_id: 2, title: 'ثبت‌نام کنکور سراسری و ارشد', unit_price: 100000, is_active: true },
-    { id: 8, category_id: 2, title: 'ثبت‌نام وام ازدواج و فرزندآوری', unit_price: 120000, is_active: true },
-    { id: 9, category_id: 2, title: 'ثبت نام تعویض پلاک و نوبت‌دهی', unit_price: 50000, is_active: true },
-    { id: 10, category_id: 3, title: 'ارسال اظهارنامه مالیاتی مشاغل', unit_price: 250000, is_active: true },
-    { id: 11, category_id: 3, title: 'دریافت سوابق بیمه تامین اجتماعی', unit_price: 40000, is_active: true },
-    { id: 12, category_id: 3, title: 'صدور فیش بیمه تامین اجتماعی', unit_price: 30000, is_active: true },
-    { id: 13, category_id: 4, title: 'ثبت نام سامانه ثنا و احراز هویت', unit_price: 80000, is_active: true },
-    { id: 14, category_id: 4, title: 'استعلام خلافی، عوارض و نمره منفی', unit_price: 35000, is_active: true },
-    { id: 15, category_id: 4, title: 'دریافت ابلاغیه الکترونیک قضایی', unit_price: 30000, is_active: true },
-    { id: 16, category_id: 5, title: 'تایپ فارسی (هر صفحه استاندارد)', unit_price: 25000, is_active: true },
-    { id: 17, category_id: 5, title: 'صحافی سیمی و طلق (تا ۵۰ برگ)', unit_price: 40000, is_active: true },
-    { id: 18, category_id: 6, title: 'کاور پلاستیکی A4 و پوشه', unit_price: 10000, is_active: true },
-    { id: 19, category_id: 6, title: 'فلش مموری ۳۲ گیگابایت', unit_price: 320000, is_active: true },
-  ],
+  services: [],
   invoices: [],
   expenses: [],
   pendingOrders: [],
   settlements: [],
   settings: {
-    name: 'کافی‌نت مرکزی',
-    phone: '۰۲۱-۱۲۳۴۵۶۷۸',
-    address: 'تهران، خیابان اصلی، پلاک ۱',
+    name: '',
+    phone: '',
+    address: '',
     invoice_footer_note: 'با تشکر از اعتماد شما - مدارک دریافتی تا ۴۸ ساعت معتبر می‌باشند.',
     default_settlement_model: 'total_share',
+    default_employer_percentage: 50,
+    is_initialized: false,
   },
   activeShiftId: null,
   activeUserId: null,
@@ -121,13 +72,45 @@ export function loadDatabase(): AppDatabaseState {
   }
 }
 
-// ذخیره قطعی دیتابیس
+// ذخیره قطعی دیتابیس (همگام‌سازی همزمان در localStorage و فایل فیزیکی هارد دیسک)
 export function saveDatabase(data: AppDatabaseState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const serialized = JSON.stringify(data);
+    localStorage.setItem(STORAGE_KEY, serialized);
+
+    // همگام‌سازی فوری و پایدار با سرور داخلی و نوشتن در فایل cafenet_db.json هارد دیسک
+    if (typeof fetch !== 'undefined') {
+      fetch('/api/database', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: serialized,
+      }).catch((err) => {
+        // در صورت عدم دسترسی موقت به سرور، داده در localStorage محفوظ است
+        console.warn('عدم همگام‌سازی فایل هارد دیسک:', err);
+      });
+    }
   } catch (error) {
     console.error('خطا در ذخیره پایگاه داده محلی:', error);
   }
+}
+
+// همگام‌سازی اولیه دیتابیس از روی فایل فیزیکی دیسک سخت
+export async function syncDatabaseWithDisk(): Promise<AppDatabaseState | null> {
+  try {
+    if (typeof fetch === 'undefined') return null;
+    const res = await fetch('/api/database');
+    if (res.ok) {
+      const diskData = await res.json();
+      if (diskData && diskData.users && Array.isArray(diskData.users)) {
+        const merged: AppDatabaseState = { ...INITIAL_DATABASE_STATE, ...diskData };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        return merged;
+      }
+    }
+  } catch (err) {
+    console.warn('امکان اتصال به فایل دیسک در استارت‌آپ وجود ندارد:', err);
+  }
+  return null;
 }
 
 import { generateBackupChecksum, verifyBackupChecksum } from './security';
@@ -191,4 +174,9 @@ export function restoreDatabaseBackup(file: File): Promise<AppDatabaseState> {
     reader.onerror = () => reject(new Error('خطا در خواندن فایل'));
     reader.readAsText(file);
   });
+}
+
+// ریست کردن کل سیستم به حالت خام کارخانه برای راه‌اندازی مجدد
+export function resetDatabaseToCleanSlate(): void {
+  saveDatabase(INITIAL_DATABASE_STATE);
 }

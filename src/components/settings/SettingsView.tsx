@@ -12,6 +12,9 @@ export const SettingsView: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState<string | undefined>(settings.logo_url);
   const [invoiceFooter, setInvoiceFooter] = useState(settings.invoice_footer_note);
   const [settlementModel, setSettlementModel] = useState(settings.default_settlement_model);
+  const [employerPercentage, setEmployerPercentage] = useState<number>(
+    settings.default_employer_percentage ?? 50
+  );
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState<string>('');
 
@@ -45,6 +48,7 @@ export const SettingsView: React.FC = () => {
       logo_url: logoUrl,
       invoice_footer_note: invoiceFooter.trim(),
       default_settlement_model: settlementModel,
+      default_employer_percentage: employerPercentage,
     });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -171,18 +175,38 @@ export const SettingsView: React.FC = () => {
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            مدل پیش‌فرض محاسبه سود پرسنل:
-          </label>
-          <select
-            value={settlementModel}
-            onChange={(e) => setSettlementModel(e.target.value as any)}
-            className="w-full sm:w-80 h-10 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-xs font-bold"
-          >
-            <option value="total_share">مدل شراکتی (درصد از سود خالص کل)</option>
-            <option value="individual_performance">مدل پورسانت عملکردی فردی (با تسهیم هزینه)</option>
-          </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              مدل پیش‌فرض محاسبه سود پرسنل:
+            </label>
+            <select
+              value={settlementModel}
+              onChange={(e) => setSettlementModel(e.target.value as any)}
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-xs font-bold"
+            >
+              <option value="total_share">مدل شراکتی (درصد از سود خالص کل)</option>
+              <option value="individual_performance">مدل پورسانت عملکردی فردی (با تسهیم هزینه)</option>
+              <option value="hourly_attendance">مدل ساعتی (بر پایه ساعت کار حضور و سهم کارفرما)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              درصد پیش‌فرض سهم کارفرما در مدل ساعتی:
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={employerPercentage}
+                onChange={(e) => setEmployerPercentage(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                className="w-full h-10 px-3 pr-8 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-xs font-bold"
+              />
+              <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">٪</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 pt-2">
@@ -236,6 +260,51 @@ export const SettingsView: React.FC = () => {
             {restoreStatus}
           </div>
         )}
+      </div>
+
+      {/* بخش بازنشانی به حالت خام کارخانه */}
+      <div className="bg-white dark:bg-zinc-800 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/40 shadow-sm space-y-3">
+        <h3 className="text-xs font-bold text-rose-600 dark:text-rose-400">
+          بازنشانی به حالت خام کارخانه (راه‌اندازی اولیه مجدد)
+        </h3>
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          در صورتی که می‌خواهید اطلاعات تستی را پاک کرده و برنامه را از صفر ویزاردی با مشخصات جدید و فایل اکسل تازه راه‌اندازی کنید، از این گزینه استفاده کنید.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm('هشدار: آیا مطمئن هستید؟ تمامی داده‌ها پاک شده و ویزارد راه‌اندازی اولیه از ابتدا اجرا خواهد شد.')) {
+              localStorage.clear();
+              fetch('/api/database', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  users: [],
+                  shifts: [],
+                  serviceCategories: [],
+                  services: [],
+                  invoices: [],
+                  expenses: [],
+                  pendingOrders: [],
+                  settlements: [],
+                  settings: {
+                    name: '',
+                    phone: '',
+                    address: '',
+                    invoice_footer_note: 'با تشکر از اعتماد شما',
+                    default_settlement_model: 'total_share',
+                    is_initialized: false,
+                  },
+                }),
+              }).finally(() => {
+                window.location.reload();
+              });
+            }
+          }}
+          className="px-4 py-2 border border-rose-300 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl text-xs font-bold transition-all"
+        >
+          پاکسازی و ریست سیستم به حالت خام کارخانه
+        </button>
       </div>
     </div>
   );

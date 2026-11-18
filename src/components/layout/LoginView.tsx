@@ -11,7 +11,7 @@ export const LoginView: React.FC = () => {
   const [error, setError] = useState('');
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const activeUsers = users.filter((u) => u.is_active);
+  const activeUsers = users.filter((u) => u.is_active && !u.is_deleted);
 
   // فوکوس خودکار هنگام انتخاب کاربر
   useEffect(() => {

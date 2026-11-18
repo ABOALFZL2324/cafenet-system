@@ -13,7 +13,7 @@ import {
   PaymentMethod,
   SettlementModel,
 } from '../types';
-import { loadDatabase, saveDatabase, AppDatabaseState } from '../utils/storage';
+import { loadDatabase, saveDatabase, AppDatabaseState, syncDatabaseWithDisk, resetDatabaseToCleanSlate } from '../utils/storage';
 import { isInJalaliMonth } from '../utils/jalali';
 import { sanitizeInput } from '../utils/security';
 
@@ -42,13 +42,25 @@ interface DataContextType {
   updateServiceItem: (id: number, item: Partial<ServiceItem>) => void;
   deleteServiceItem: (id: number) => void;
   addServiceCategory: (name: string) => void;
+  importServicesBulk: (servicesList: { category: string; title: string; unit_price: number }[], replaceExisting?: boolean) => number;
   // مدیریت کاربران
   addUser: (userData: Omit<User, 'id' | 'created_at'>) => void;
   updateUser: (id: number, userData: Partial<User>) => void;
-  // تنظیمات
+  deleteUser: (id: number) => void;
+  restoreUser: (id: number) => void;
+  // راه‌اندازی و تنظیمات
+  setupInitialSystem: (setupData: {
+    cafeName: string;
+    phone: string;
+    address: string;
+    adminUser: { full_name: string; username: string; pin_code: string; profit_percentage: number };
+    operators?: Omit<User, 'id' | 'created_at'>[];
+    services: { category: string; title: string; unit_price: number }[];
+  }) => void;
+  resetToCleanSlate: () => void;
   updateSettings: (newSettings: Partial<CafeNetSettings>) => void;
   // تسویه ماهانه
-  calculateMonthlySettlement: (year: number, month: number, model: SettlementModel) => MonthlySettlementRecord;
+  calculateMonthlySettlement: (year: number, month: number, model: SettlementModel, employerPercentage?: number) => MonthlySettlementRecord;
   finalizeSettlement: (record: MonthlySettlementRecord) => void;
 }
 
@@ -62,7 +74,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    refreshData();
+    // بارگذاری اولیه از هارد دیسک و اطمینان از همگام بودن دائمی
+    syncDatabaseWithDisk().then((diskState) => {
+      if (diskState) {
+        setDbState(diskState);
+      }
+    });
   }, []);
 
   const addInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoice_number' | 'created_at'>): Invoice => {
@@ -177,6 +194,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDbState({ ...db });
   };
 
+  // ورود گروهی خدمات از فایل اکسل به پایگاه‌داده
+  const importServicesBulk = (
+    servicesList: { category: string; title: string; unit_price: number }[],
+    replaceExisting: boolean = false
+  ): number => {
+    const db = loadDatabase();
+    if (replaceExisting) {
+      db.services = [];
+    }
+
+    let nextCatId = db.serviceCategories.length > 0 ? Math.max(...db.serviceCategories.map((c) => c.id)) + 1 : 1;
+    let nextServiceId = db.services.length > 0 ? Math.max(...db.services.map((s) => s.id)) + 1 : 1;
+    let count = 0;
+
+    for (const item of servicesList) {
+      const catName = sanitizeInput(item.category.trim()) || 'عمومی و متفرقه';
+      let category = db.serviceCategories.find((c) => c.name.toLowerCase() === catName.toLowerCase());
+
+      if (!category) {
+        category = { id: nextCatId++, name: catName, is_active: true };
+        db.serviceCategories.push(category);
+      }
+
+      const cleanTitle = sanitizeInput(item.title.trim());
+      if (!cleanTitle) continue;
+
+      db.services.push({
+        id: nextServiceId++,
+        category_id: category.id,
+        category_name: category.name,
+        title: cleanTitle,
+        unit_price: item.unit_price,
+        is_active: true,
+      });
+
+      count++;
+    }
+
+    saveDatabase(db);
+    setDbState({ ...db });
+    return count;
+  };
+
   const addUser = (userData: Omit<User, 'id' | 'created_at'>) => {
     const db = loadDatabase();
     const newUser: User = {
@@ -199,6 +259,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // حذف منطقی (Soft Delete) اپراتور بدون دستکاری یا حذف هیچ‌یک از تراکنش‌های قبلی او
+  const deleteUser = (id: number) => {
+    const db = loadDatabase();
+    const idx = db.users.findIndex((u) => u.id === id);
+    if (idx !== -1) {
+      // فقط وضعیت حذف منطقی ثبت می‌شود؛ تراکنش‌ها، فاکتورها، هزینه‌ها و شیفت‌ها کاملاً دست‌نخورده باقی می‌مانند
+      db.users[idx] = {
+        ...db.users[idx],
+        is_deleted: true,
+        is_active: false,
+        deleted_at: new Date().toISOString(),
+      };
+      saveDatabase(db);
+      setDbState({ ...db });
+    }
+  };
+
+  // بازیابی اپراتور حذف‌شده
+  const restoreUser = (id: number) => {
+    const db = loadDatabase();
+    const idx = db.users.findIndex((u) => u.id === id);
+    if (idx !== -1) {
+      db.users[idx] = {
+        ...db.users[idx],
+        is_deleted: false,
+        is_active: true,
+        deleted_at: undefined,
+      };
+      saveDatabase(db);
+      setDbState({ ...db });
+    }
+  };
+
   const updateSettings = (newSettings: Partial<CafeNetSettings>) => {
     const db = loadDatabase();
     db.settings = { ...db.settings, ...newSettings };
@@ -206,49 +299,191 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDbState({ ...db });
   };
 
-  // محاسبه دقیق و واقعی سود ماهانه (برگرفته از بند ۲.۸ مدل مفهومی)
+  // راه‌اندازی اولیه ویزاردی سیستم خام با اطلاعات مدیر و اکسل خدمات
+  const setupInitialSystem = (setupData: {
+    cafeName: string;
+    phone: string;
+    address: string;
+    adminUser: { full_name: string; username: string; pin_code: string; profit_percentage: number };
+    operators?: Omit<User, 'id' | 'created_at'>[];
+    services: { category: string; title: string; unit_price: number }[];
+  }) => {
+    const db = loadDatabase();
+
+    db.settings = {
+      ...db.settings,
+      name: sanitizeInput(setupData.cafeName) || 'کافی‌نت',
+      phone: sanitizeInput(setupData.phone) || '',
+      address: sanitizeInput(setupData.address) || '',
+      is_initialized: true,
+    };
+
+    // ایجاد مدیر ارشد
+    const adminUser: User = {
+      id: 1,
+      full_name: sanitizeInput(setupData.adminUser.full_name),
+      username: sanitizeInput(setupData.adminUser.username).toLowerCase() || 'admin',
+      pin_code: setupData.adminUser.pin_code,
+      role: 'admin',
+      profit_percentage: setupData.adminUser.profit_percentage ?? 100,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+
+    db.users = [adminUser];
+
+    // ایجاد اپراتورها در صورت تعریف
+    if (setupData.operators && setupData.operators.length > 0) {
+      setupData.operators.forEach((op, idx) => {
+        db.users.push({
+          ...op,
+          id: idx + 2,
+          full_name: sanitizeInput(op.full_name),
+          username: sanitizeInput(op.username).toLowerCase(),
+          role: 'operator',
+          is_active: true,
+          created_at: new Date().toISOString(),
+        });
+      });
+    }
+
+    // ایجاد دسته‌ها و خدمات اکسل
+    db.services = [];
+    db.serviceCategories = [];
+    let nextCatId = 1;
+    let nextServiceId = 1;
+
+    for (const item of setupData.services) {
+      const catName = sanitizeInput(item.category.trim()) || 'عمومی و متفرقه';
+      let category = db.serviceCategories.find((c) => c.name.toLowerCase() === catName.toLowerCase());
+
+      if (!category) {
+        category = { id: nextCatId++, name: catName, is_active: true };
+        db.serviceCategories.push(category);
+      }
+
+      db.services.push({
+        id: nextServiceId++,
+        category_id: category.id,
+        category_name: category.name,
+        title: sanitizeInput(item.title.trim()),
+        unit_price: item.unit_price,
+        is_active: true,
+      });
+    }
+
+    db.activeShiftId = null;
+    db.activeUserId = null;
+
+    saveDatabase(db);
+    setDbState({ ...db });
+  };
+
+  // بازگرداندن سیستم به حالت خام جهت راه‌اندازی مجدد
+  const resetToCleanSlate = () => {
+    resetDatabaseToCleanSlate();
+    setDbState(loadDatabase());
+  };
+
+  // محاسبه دقیق و واقعی سود ماهانه (شامل مدل شراکتی، عملکردی و ساعت کارکرد حضور)
   const calculateMonthlySettlement = (
     year: number,
     month: number,
-    model: SettlementModel
+    model: SettlementModel,
+    employerPercentage?: number
   ): MonthlySettlementRecord => {
     const db = loadDatabase();
 
     // فیلتر کردن درآمدها و هزینه‌های این ماه شمسی خاص
     const monthInvoices = db.invoices.filter((inv) => isInJalaliMonth(inv.created_at, year, month));
     const monthExpenses = db.expenses.filter((exp) => isInJalaliMonth(exp.created_at, year, month));
+    const monthShifts = db.shifts.filter((s) => isInJalaliMonth(s.start_time, year, month));
 
     const totalIncome = monthInvoices.reduce((acc, inv) => acc + inv.final_amount, 0);
     const totalExpense = monthExpenses.reduce((acc, exp) => acc + exp.amount, 0);
     const netProfit = Math.max(0, totalIncome - totalExpense);
 
-    const activeUsers = db.users.filter((u) => u.is_active);
+    // محاسبه ساعات کارکرد کارگران در این ماه
+    const userHoursMap = new Map<number, number>();
+    monthShifts.forEach((s) => {
+      if (s.workers && s.workers.length > 0) {
+        s.workers.forEach((w) => {
+          let h = w.hours;
+          if (h === undefined || h === null) {
+            const startMs = new Date(s.start_time).getTime();
+            const endMs = s.end_time ? new Date(s.end_time).getTime() : Date.now();
+            h = Math.max(0.1, Number(((endMs - startMs) / (1000 * 3600)).toFixed(2)));
+          }
+          userHoursMap.set(w.user_id, (userHoursMap.get(w.user_id) || 0) + h);
+        });
+      } else {
+        // شیفت‌های قبل از به‌روزرسانی که فقط user_id داشتند
+        const startMs = new Date(s.start_time).getTime();
+        const endMs = s.end_time ? new Date(s.end_time).getTime() : Date.now();
+        const h = Math.max(0.1, Number(((endMs - startMs) / (1000 * 3600)).toFixed(2)));
+        userHoursMap.set(s.user_id, (userHoursMap.get(s.user_id) || 0) + h);
+      }
+    });
 
-    const details = activeUsers.map((user) => {
+    // سهم کارفرما و بودجه کل پرداختی ساعتی
+    const employerPercentageValue =
+      employerPercentage !== undefined
+        ? employerPercentage
+        : (db.settings.default_employer_percentage ?? 50);
+
+    const employerAmount = Math.round((netProfit * employerPercentageValue) / 100);
+    const remainingProfit = Math.max(0, netProfit - employerAmount);
+
+    let totalWorkersHours = 0;
+    userHoursMap.forEach((hrs) => {
+      totalWorkersHours += hrs;
+    });
+    totalWorkersHours = Number(totalWorkersHours.toFixed(2));
+
+    const hourlyRateBudget =
+      totalWorkersHours > 0 ? Math.round(remainingProfit / totalWorkersHours) : 0;
+
+    // کاربران فعال به علاوه کاربرانی که ممکن است بعداً حذف شده باشند اما در این ماه فعالیت داشته‌اند
+    const relevantUsers = db.users.filter((u) => {
+      const hasInvoicesInMonth = monthInvoices.some((inv) => inv.user_id === u.id);
+      const hasHours = (userHoursMap.get(u.id) || 0) > 0;
+      return (u.is_active && !u.is_deleted) || hasInvoicesInMonth || hasHours;
+    });
+
+    const details = relevantUsers.map((user) => {
       // درآمد ایجاد شده توسط شیفت‌ها و تراکنش‌های این اپراتور
       const userInvoices = monthInvoices.filter((inv) => inv.user_id === user.id);
       const userIncome = userInvoices.reduce((acc, inv) => acc + inv.final_amount, 0);
+      const userHoursWorked = Number((userHoursMap.get(user.id) || 0).toFixed(2));
 
       let userAllocatedExpense = 0;
       let userNetProfit = 0;
       let userShareAmount = 0;
+      let userHourlyShareAmount = 0;
 
       if (model === 'total_share') {
         // روش الف: شراکت از کل سود ماه
         userNetProfit = netProfit;
         userShareAmount = Math.round((netProfit * user.profit_percentage) / 100);
-      } else {
+      } else if (model === 'individual_performance') {
         // روش ب: پورسانت عملکردی فردی با تسهیم هزینه
         const userIncomeRatio = totalIncome > 0 ? userIncome / totalIncome : 0;
         userAllocatedExpense = Math.round(totalExpense * userIncomeRatio);
         userNetProfit = Math.max(0, userIncome - userAllocatedExpense);
         userShareAmount = Math.round((userNetProfit * user.profit_percentage) / 100);
+      } else if (model === 'hourly_attendance') {
+        // روش ج: محاسبه حقوق بر پایه ساعت کار حضور و سهم کارفرما
+        userHourlyShareAmount = Math.round(userHoursWorked * hourlyRateBudget);
+        userNetProfit = userHourlyShareAmount;
+        userShareAmount = userHourlyShareAmount;
       }
 
       return {
         user_id: user.id,
         user_name: user.full_name,
         profit_percentage: user.profit_percentage,
+        hours_worked: userHoursWorked,
+        hourly_share_amount: userHourlyShareAmount,
         user_income: userIncome,
         user_allocated_expense: userAllocatedExpense,
         user_net_profit: userNetProfit,
@@ -264,6 +499,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       total_income: totalIncome,
       total_expense: totalExpense,
       net_profit: netProfit,
+      employer_percentage: model === 'hourly_attendance' ? employerPercentageValue : undefined,
+      employer_amount: model === 'hourly_attendance' ? employerAmount : undefined,
+      total_workers_hours: model === 'hourly_attendance' ? totalWorkersHours : undefined,
+      hourly_rate_budget: model === 'hourly_attendance' ? hourlyRateBudget : undefined,
       details,
       settled_by_user_id: 1,
       is_settled: false,
@@ -309,8 +548,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateServiceItem,
         deleteServiceItem,
         addServiceCategory,
+        importServicesBulk,
         addUser,
         updateUser,
+        deleteUser,
+        restoreUser,
+        setupInitialSystem,
+        resetToCleanSlate,
         updateSettings,
         calculateMonthlySettlement,
         finalizeSettlement,
