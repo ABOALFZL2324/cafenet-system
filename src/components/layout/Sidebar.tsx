@@ -15,6 +15,7 @@ import {
   Lock,
   ShieldCheck,
   ChevronLeft,
+  BookOpen,
 } from 'lucide-react';
 
 export type NavTab =
@@ -22,6 +23,7 @@ export type NavTab =
   | 'pending'
   | 'invoices'
   | 'expenses'
+  | 'debts'
   | 'shifts'
   | 'rates'
   | 'settlement'
@@ -49,12 +51,16 @@ interface NavSection {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => {
   const { currentUser } = useAuth();
-  const { pendingOrders } = useData();
+  const { pendingOrders, invoices } = useData();
 
   const isAdmin = currentUser?.role === 'admin';
 
   const activePendingCount = pendingOrders.filter(
     (o) => o.status === 'pending' || o.status === 'in_progress'
+  ).length;
+
+  const activeDebtsCount = invoices.filter(
+    (i) => i.payment_method === 'credit' && i.is_settled === false
   ).length;
 
   const sections: NavSection[] = [
@@ -70,6 +76,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
         },
         { id: 'invoices', label: 'فاکتورها و دریافتی‌ها', icon: Receipt },
         { id: 'expenses', label: 'هزینه‌های مغازه', icon: ArrowDownCircle },
+        {
+          id: 'debts',
+          label: 'حساب دفتری و نسیه‌ها',
+          icon: BookOpen,
+          badge: activeDebtsCount > 0 ? activeDebtsCount : undefined,
+        },
       ],
     },
     {

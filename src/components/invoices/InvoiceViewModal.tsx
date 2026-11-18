@@ -215,7 +215,13 @@ export const InvoiceViewModal: React.FC<InvoiceViewModalProps> = ({ invoiceId, o
                 </div>
                 <div className="flex-between text-[11px] text-slate-500 pt-0.5">
                   <span>روش پرداخت:</span>
-                  <span className="font-bold">{invoice.payment_method === 'cash' ? 'نقدی' : 'کارتخوان'}</span>
+                  <span className="font-bold">
+                    {invoice.payment_method === 'cash'
+                      ? 'نقدی'
+                      : invoice.payment_method === 'pos'
+                      ? 'کارتخوان'
+                      : `نسیه دفتری ${invoice.is_settled ? '(تسویه شده)' : '(تسویه نشده)'}`}
+                  </span>
                 </div>
               </div>
 
@@ -306,7 +312,13 @@ export const InvoiceViewModal: React.FC<InvoiceViewModalProps> = ({ invoiceId, o
                   </div>
                   <div className="flex-between text-[11px] text-slate-500 pt-0.5">
                     <span>روش پرداخت:</span>
-                    <span className="font-semibold">{invoice.payment_method === 'cash' ? 'نقدی' : 'دستگاه کارتخوان'}</span>
+                    <span className="font-semibold">
+                      {invoice.payment_method === 'cash'
+                        ? 'نقدی'
+                        : invoice.payment_method === 'pos'
+                        ? 'دستگاه کارتخوان'
+                        : `نسیه / حساب دفتری ${invoice.is_settled ? '(تسویه شده)' : '(تسویه نشده)'}`}
+                    </span>
                   </div>
                 </div>
               </div>

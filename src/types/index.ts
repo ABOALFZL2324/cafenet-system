@@ -48,7 +48,7 @@ export interface ServiceItem {
   is_active: boolean;
 }
 
-export type PaymentMethod = 'cash' | 'pos';
+export type PaymentMethod = 'cash' | 'pos' | 'credit';
 
 export interface InvoiceItem {
   id: string; // شناسه محلی قلم فاکتور
@@ -73,6 +73,9 @@ export interface Invoice {
   discount: number;
   final_amount: number;
   payment_method: PaymentMethod;
+  is_settled?: boolean; // آیا فاکتور تسویه شده است یا نسیه باقی مانده است؟
+  settled_at?: string; // تاریخ تسویه بدهی
+  settled_payment_method?: 'cash' | 'pos'; // نحوه تسویه نسیه
   created_at: string;
 }
 

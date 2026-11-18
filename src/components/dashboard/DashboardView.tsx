@@ -7,6 +7,7 @@ import { QuickSaleModal } from './QuickSaleModal';
 import { PrintCalculatorModal } from './PrintCalculatorModal';
 import { ExpenseModal } from './ExpenseModal';
 import { InvoiceViewModal } from '../invoices/InvoiceViewModal';
+import { QuickLinksDashboard } from './QuickLinksDashboard';
 import {
   Play,
   Square,
@@ -28,6 +29,10 @@ import {
   Check,
   ShieldCheck,
   Zap,
+  Coins,
+  Award,
+  Wallet,
+  Percent,
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -107,6 +112,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
   const activePendingOrders = pendingOrders.filter(
     (o) => o.status === 'pending' || o.status === 'in_progress'
   );
+
+  // محاسبه آنی کارکرد و سهم متصدی در شیفت فعال
+  const shiftInvoices = currentShift
+    ? invoices.filter((i) => new Date(i.created_at) >= new Date(currentShift.start_time))
+    : todayInvoices;
+
+  const myShiftInvoices = shiftInvoices.filter((i) => i.user_id === currentUser?.id);
+  const myShiftTotalSales = myShiftInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
+  const myCommissionRate = currentUser?.profit_percentage ?? 0;
+  const myEarnedCommission = Math.round(myShiftTotalSales * (myCommissionRate / 100));
 
   // سایر کاربران فعال سیستم جهت حضور همزمان
   const activeOtherUsers = users.filter(
@@ -271,6 +286,70 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
               پایان و تحویل شیفت کاری
             </button>
           )}
+        </div>
+      </div>
+
+      {/* ================= ویجت نمایش آنی سهم متصدی در شیفت فعلی ================= */}
+      <div className="bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-slate-900 text-white rounded-2xl p-4.5 shadow-lg border border-purple-500/30 relative overflow-hidden">
+        {/* پس‌زمینه دکوراتیو محو */}
+        <div className="absolute -left-10 -bottom-10 w-44 h-44 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute right-1/3 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-500 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/40 ring-4 ring-purple-400/20">
+              <Coins className="w-6 h-6 text-amber-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-white">
+                  سهم و کارکرد آنی متصدی ({currentUser?.full_name || 'متصدی حاضر'})
+                </span>
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-purple-400/20 text-purple-200 border border-purple-400/30 flex items-center gap-1">
+                  <Percent className="w-3 h-3 text-amber-300" />
+                  نرخ پورسانت: {myCommissionRate}٪
+                </span>
+                {currentShift && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    شیفت فعال
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-purple-200/80 mt-1">
+                محاسبه زنده بر اساس {myShiftInvoices.length} فاکتور ثبت‌شده توسط شما در طول این شیفت
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-end md:self-auto w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-purple-800/60">
+            {/* میزان فروش این متصدی */}
+            <div className="text-right px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-[10px] text-purple-200 font-semibold">فروش شیفت شما</div>
+              <div className="text-xs font-black text-purple-100 font-mono mt-0.5">
+                {formatToman(myShiftTotalSales)}
+              </div>
+            </div>
+
+            {/* سهم خالص درآمدی این متصدی */}
+            <div className="text-right px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-400/40 shadow-inner">
+              <div className="text-[10px] text-amber-300 font-bold flex items-center gap-1">
+                <Award className="w-3 h-3" />
+                سهم آنی شما از شیفت
+              </div>
+              <div className="text-lg font-black text-amber-300 tracking-tight font-mono mt-0.5">
+                {formatToman(myEarnedCommission)}
+              </div>
+            </div>
+
+            <button
+              onClick={() => onNavigateTab('settlement')}
+              className="px-3 py-2 rounded-xl bg-purple-600/60 hover:bg-purple-600 text-white text-[11px] font-bold transition-all border border-purple-400/30 flex items-center gap-1 shrink-0"
+              title="مشاهده گزارش کامل تسویه‌حساب ماهانه و دستمزدها"
+            >
+              <span>تسویه ماهانه</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -497,10 +576,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
                         className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold shadow-2xs ${
                           inv.payment_method === 'pos'
                             ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/40'
+                            : inv.payment_method === 'credit'
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/40'
                             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/40'
                         }`}
                       >
-                        {inv.payment_method === 'pos' ? '💳 کارت‌خوان' : '💵 نقدی'}
+                        {inv.payment_method === 'pos'
+                          ? '💳 کارت‌خوان'
+                          : inv.payment_method === 'credit'
+                          ? (inv.is_settled ? '📖 نسیه (تسویه‌شده)' : '📖 نسیه دفتری')
+                          : '💵 نقدی'}
                       </span>
                     </td>
                     <td className="p-3.5 text-slate-500 dark:text-zinc-400 font-medium">{inv.user_name}</td>
@@ -520,6 +605,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           )}
         </div>
       </div>
+
+      {/* ================= داشبورد لینک‌های سریع سامانه‌های دولتی و پرکاربرد ================= */}
+      <QuickLinksDashboard />
 
       {/* ================= مودال انتخاب همکاران در شروع شیفت ================= */}
       {showStartShiftModal && (

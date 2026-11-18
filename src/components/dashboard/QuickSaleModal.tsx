@@ -16,6 +16,7 @@ import {
   Sparkles,
   CreditCard,
   Banknote,
+  BookOpen,
   User,
   Phone,
   Star,
@@ -214,6 +215,11 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
   const handleSaveInvoice = () => {
     if (items.length === 0) {
       setError('حداقل یک خدمت به فاکتور اضافه کنید.');
+      return;
+    }
+
+    if (paymentMethod === 'credit' && !customerName.trim()) {
+      setError('جهت ثبت حساب دفتری و نسیه، وارد کردن نام مشتری یا شرکت الزامی است.');
       return;
     }
 
@@ -521,31 +527,43 @@ export const QuickSaleModal: React.FC<QuickSaleModalProps> = ({
 
             {/* بخش خلاصه مالی و دکمه پرداخت */}
             <div className="bg-white dark:bg-zinc-800/90 rounded-2xl p-3 border border-slate-200/90 dark:border-zinc-700/90 shrink-0 space-y-2.5 shadow-xs">
-              {/* انتخاب روش پرداخت */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* انتخاب روش پرداخت: کارت‌خوان، نقدی، حساب دفتری و نسیه */}
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('pos')}
-                  className={`py-2 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+                  className={`py-2 rounded-xl border text-[11px] font-black flex items-center justify-center gap-1 transition-all ${
                     paymentMethod === 'pos'
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/25'
                       : 'border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-750'
                   }`}
                 >
-                  <CreditCard className="w-4 h-4" />
-                  کارت‌خوان (POS)
+                  <CreditCard className="w-3.5 h-3.5" />
+                  کارت‌خوان
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('cash')}
-                  className={`py-2 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+                  className={`py-2 rounded-xl border text-[11px] font-black flex items-center justify-center gap-1 transition-all ${
                     paymentMethod === 'cash'
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/25'
                       : 'border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-750'
                   }`}
                 >
-                  <Banknote className="w-4 h-4" />
+                  <Banknote className="w-3.5 h-3.5" />
                   نقدی
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('credit')}
+                  className={`py-2 rounded-xl border text-[11px] font-black flex items-center justify-center gap-1 transition-all ${
+                    paymentMethod === 'credit'
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/25'
+                      : 'border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-750'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  نسیه / دفتری
                 </button>
               </div>
 

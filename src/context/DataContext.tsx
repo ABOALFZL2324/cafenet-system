@@ -31,6 +31,7 @@ interface DataContextType {
   refreshData: () => void;
   // عملیات فاکتور و درآمد
   addInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoice_number' | 'created_at'>) => Invoice;
+  settleDebtInvoice: (invoiceId: number, method: 'cash' | 'pos') => void;
   // عملیات هزینه
   addExpense: (expenseData: Omit<Expense, 'id' | 'created_at'>) => Expense;
   // کارهای در دست اقدام
@@ -105,11 +106,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       category_name: i.category_name ? sanitizeInput(i.category_name) : undefined,
     }));
 
+    const isCredit = invoiceData.payment_method === 'credit';
     const newInvoice: Invoice = {
       ...invoiceData,
       customer_name: invoiceData.customer_name ? sanitizeInput(invoiceData.customer_name) : undefined,
       customer_phone: invoiceData.customer_phone ? sanitizeInput(invoiceData.customer_phone) : undefined,
       items: sanitizedItems,
+      is_settled: !isCredit,
+      settled_at: !isCredit ? new Date().toISOString() : undefined,
+      settled_payment_method: !isCredit ? (invoiceData.payment_method as any) : undefined,
       id,
       invoice_number: invoiceNum,
       created_at: new Date().toISOString(),
@@ -119,6 +124,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveDatabase(db);
     setDbState({ ...db });
     return newInvoice;
+  };
+
+  const settleDebtInvoice = (invoiceId: number, method: 'cash' | 'pos') => {
+    const db = loadDatabase();
+    const inv = db.invoices.find((i) => i.id === invoiceId);
+    if (inv) {
+      inv.is_settled = true;
+      inv.settled_at = new Date().toISOString();
+      inv.settled_payment_method = method;
+      saveDatabase(db);
+      setDbState({ ...db });
+    }
   };
 
   const addExpense = (expenseData: Omit<Expense, 'id' | 'created_at'>): Expense => {
@@ -552,6 +569,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         settings: dbState.settings,
         refreshData,
         addInvoice,
+        settleDebtInvoice,
         addExpense,
         addPendingOrder,
         updateOrderStatus,
