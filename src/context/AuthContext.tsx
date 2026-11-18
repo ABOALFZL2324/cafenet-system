@@ -31,7 +31,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (db.activeShiftId) {
       const s = db.shifts.find((x) => x.id === db.activeShiftId && x.status === 'active');
-      if (s) setCurrentShift(s);
+      if (s) {
+        // جلوگیری از باز ماندن غیرمنطقی شیفت در صورت خاموش شدن سیستم و عدم بستن توسط کاربر (بیش از ۱۲ ساعت)
+        const startMs = new Date(s.start_time).getTime();
+        const diffHours = (Date.now() - startMs) / (1000 * 3600);
+        if (diffHours > 12) {
+          const autoEndTime = new Date(startMs + 8 * 3600 * 1000).toISOString(); // سقف ۸ ساعت
+          s.end_time = autoEndTime;
+          s.status = 'closed';
+          s.handover_note = (s.handover_note ? s.handover_note + ' | ' : '') + 'بسته شده خودکار به علت خاموش ماندن سیستم';
+          if (Array.isArray(s.workers)) {
+            s.workers = s.workers.map((w) => ({ ...w, hours: w.hours ?? 8 }));
+          }
+          db.activeShiftId = null;
+          saveDatabase(db);
+          setCurrentShift(null);
+        } else {
+          setCurrentShift(s);
+        }
+      }
     }
   }, []);
 

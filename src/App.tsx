@@ -21,14 +21,21 @@ import { QuickSaleModal } from './components/dashboard/QuickSaleModal';
 import { InvoiceViewModal } from './components/invoices/InvoiceViewModal';
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { useData } from './context/DataContext';
+import { isClientMode, getServerBaseUrl, testServerConnection } from './utils/network';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { currentUser, isLocked, lockScreen } = useAuth();
-  const { users, settings } = useData();
+  const { users, settings, refreshData } = useData();
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [isGlobalInvoiceOpen, setIsGlobalInvoiceOpen] = useState(false);
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<number | null>(null);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
+  // وضعیت نظارت بر شبکه محلی مغازه
+  const isClient = isClientMode();
+  const [isServerOnline, setIsServerOnline] = useState<boolean>(true);
+  const [isCheckingServer, setIsCheckingServer] = useState<boolean>(false);
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('cafenet_dark_mode') === 'true';
@@ -44,6 +51,35 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
+  // پایش دوره‌ای و هارت‌بیت سیستم اصلی (هر ۶ ثانیه)
+  useEffect(() => {
+    if (!isClient) return;
+
+    const checkServer = async () => {
+      const remoteHost = getServerBaseUrl();
+      if (!remoteHost) return;
+      const res = await testServerConnection(remoteHost);
+      setIsServerOnline(res.success);
+    };
+
+    checkServer();
+    const interval = setInterval(checkServer, 6000);
+    return () => clearInterval(interval);
+  }, [isClient]);
+
+  const handleManualCheckServer = async () => {
+    setIsCheckingServer(true);
+    const remoteHost = getServerBaseUrl();
+    if (remoteHost) {
+      const res = await testServerConnection(remoteHost);
+      setIsServerOnline(res.success);
+      if (res.success) {
+        refreshData();
+      }
+    }
+    setIsCheckingServer(false);
+  };
+
   // کلیدهای میانبر سرتاسری نرم‌افزار (Keyboard Shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -57,7 +93,6 @@ export const App: React.FC = () => {
 
       // راهنمای میانبرها با کلید ؟ یا ?
       if (e.key === '?' || (e.shiftKey && e.key === '/')) {
-        // اگر داخل فیلد ورودی متن نیست
         const activeTag = (document.activeElement?.tagName || '').toLowerCase();
         if (activeTag !== 'input' && activeTag !== 'textarea') {
           e.preventDefault();
@@ -85,7 +120,6 @@ export const App: React.FC = () => {
         e.preventDefault();
         setCurrentTab('dashboard');
       } else if (e.key === 'F2') {
-        // اگر داخل مودال فاکتور نیستیم به تب سفارشات برود
         if (!isGlobalInvoiceOpen) {
           e.preventDefault();
           setCurrentTab('pending');
@@ -129,7 +163,30 @@ export const App: React.FC = () => {
         darkMode={darkMode}
         setDarkMode={setDarkMode}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        isClientMode={isClient}
+        isServerOnline={isServerOnline}
       />
+
+      {/* بنر هوشمند هشدار قطعی شبکه در صورت خاموش بودن سیستم اصلی */}
+      {isClient && !isServerOnline && (
+        <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-b border-amber-300 dark:border-amber-700/80 px-4 py-2.5 text-xs flex items-center justify-between text-amber-900 dark:text-amber-200 shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2 font-bold">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
+            <span>
+              سیستم اصلی مغازه در دسترس نیست (خاموش یا قطع شبکه). نرم‌افزار در حالت حافظه آفلاین فعال است؛ فاکتورهای شما ثبت می‌شوند و به محض روشن شدن سیستم اصلی همگام خواهند شد.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleManualCheckServer}
+            disabled={isCheckingServer}
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 shrink-0 transition-all shadow-xs disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${isCheckingServer ? 'animate-spin' : ''}`} />
+            <span>{isCheckingServer ? 'در حال بررسی...' : 'بررسی مجدد اتصال'}</span>
+          </button>
+        </div>
+      )}
 
       {/* بخش اصلی بدنه: سایدبار در راست و محتوا در چپ */}
       <div className="flex flex-1 overflow-hidden">

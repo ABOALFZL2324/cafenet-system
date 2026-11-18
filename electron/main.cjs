@@ -313,8 +313,61 @@ if (!gotTheLock) {
   });
 }
 
+// بستن خودکار شیفت فعال در هنگام خروج یا شات‌دان سیستم (Auto-End Shift on Shutdown)
+function autoCloseActiveShiftOnExit(reason = 'خاموش شدن سیستم یا خروج از برنامه') {
+  try {
+    const dbPath = getDatabaseFilePath();
+    if (!fs.existsSync(dbPath)) return;
+
+    const raw = fs.readFileSync(dbPath, 'utf-8');
+    const db = JSON.parse(raw);
+
+    let changed = false;
+    const nowIso = new Date().toISOString();
+
+    if (db.activeShiftId && Array.isArray(db.shifts)) {
+      const shiftIdx = db.shifts.findIndex((s) => s.id === db.activeShiftId && s.status === 'active');
+      if (shiftIdx !== -1) {
+        const shift = db.shifts[shiftIdx];
+        shift.end_time = nowIso;
+        shift.status = 'closed';
+        shift.handover_note = shift.handover_note
+          ? `${shift.handover_note} | (${reason})`
+          : `بسته شده خودکار به علت: ${reason}`;
+
+        // محاسبه طول کارکرد شیفت به ساعت
+        const startMs = new Date(shift.start_time).getTime();
+        const endMs = new Date(nowIso).getTime();
+        const diffHours = Math.max(0.01, Number(((endMs - startMs) / (1000 * 3600)).toFixed(2)));
+
+        if (Array.isArray(shift.workers)) {
+          shift.workers = shift.workers.map((w) => ({
+            ...w,
+            hours: w.hours !== undefined ? w.hours : diffHours,
+          }));
+        }
+
+        db.activeShiftId = null;
+        changed = true;
+        console.log(`شیفت فعال (شناسه ${shift.id}) به طور خودکار بسته و ذخیره شد.`);
+      }
+    }
+
+    if (changed) {
+      fs.writeFileSync(dbPath, JSON.stringify(db), 'utf-8');
+    }
+  } catch (err) {
+    console.error('خطا در بستن خودکار شیفت:', err);
+  }
+}
+
 app.on('before-quit', () => {
   isQuitting = true;
+  autoCloseActiveShiftOnExit('خاموش شدن سیستم یا خروج کامل از برنامه');
+});
+
+app.on('will-quit', () => {
+  autoCloseActiveShiftOnExit('خاموش شدن سیستم ویندوز');
 });
 
 app.on('window-all-closed', () => {

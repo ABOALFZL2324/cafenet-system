@@ -8,9 +8,17 @@ interface TitleBarProps {
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
   onOpenShortcuts?: () => void;
+  isClientMode?: boolean;
+  isServerOnline?: boolean;
 }
 
-export const TitleBar: React.FC<TitleBarProps> = ({ darkMode, setDarkMode, onOpenShortcuts }) => {
+export const TitleBar: React.FC<TitleBarProps> = ({
+  darkMode,
+  setDarkMode,
+  onOpenShortcuts,
+  isClientMode = false,
+  isServerOnline = true,
+}) => {
   const { currentUser, currentShift, lockScreen, logout } = useAuth();
   const { settings } = useData();
   const [currentTime, setCurrentTime] = useState<string>(formatJalaliTime());
@@ -43,6 +51,19 @@ export const TitleBar: React.FC<TitleBarProps> = ({ darkMode, setDarkMode, onOpe
             <span className="text-[10px] font-extrabold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-800/40 flex items-center gap-1 shadow-xs">
               نسخه ۱.۰.۰
             </span>
+            {isClientMode && (
+              isServerOnline ? (
+                <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-800/40 flex items-center gap-1 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  متصل به سیستم اصلی
+                </span>
+              ) : (
+                <span className="text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/40 flex items-center gap-1 shadow-xs animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  سیستم اصلی آفلاین
+                </span>
+              )
+            )}
           </div>
           <p className="text-[10px] text-slate-400 dark:text-zinc-400 font-medium">
             سامانه جامع مدیریت دخل، سفارشات و شیفت‌های کاری
