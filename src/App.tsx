@@ -210,6 +210,29 @@ export const App: React.FC = () => {
         </main>
       </div>
 
+      {/* فوتر برنامه */}
+      <footer className="h-7.5 bg-white/95 dark:bg-[#1c1c20] border-t border-slate-200/80 dark:border-zinc-800/80 px-4 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 select-none shrink-0 no-print">
+        <div className="flex items-center gap-1.5">
+          <span>طراحی شده توسط</span>
+          <strong className="text-slate-700 dark:text-slate-200 font-extrabold">ابوالفضل مهرانی</strong>
+          <span className="text-slate-300 dark:text-zinc-600">|</span>
+          <a
+            href="https://mehraani.ir"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 font-bold hover:underline font-mono"
+            dir="ltr"
+          >
+            mehraani.ir
+          </a>
+        </div>
+        <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
+          <span>سامانه مدیریت کافی‌نت</span>
+          <span>•</span>
+          <span>نسخه ۱.۰.۰</span>
+        </div>
+      </footer>
+
       {/* مودال قفل سریع صفحه */}
       <QuickLockModal />
 
